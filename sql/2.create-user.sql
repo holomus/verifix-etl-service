@@ -3,7 +3,7 @@
 \prompt 'Enter password: ' password
 
 -- Create the user
-CREATE ROLE :username WITH LOGIN PASSWORD ':password';
+CREATE ROLE :username WITH LOGIN PASSWORD :'password';
 
 -- Grant role privileges
 GRANT ALL PRIVILEGES ON DATABASE verifix_etl_db TO :username;

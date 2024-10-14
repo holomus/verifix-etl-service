@@ -2,16 +2,16 @@
 
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, Date, Boolean
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 
-Base = declarative_base()
+from .base import Base
 
 class Order(Base):
     __tablename__ = 'orders'
     
+    company_code = Column(String, primary_key=True)
+    deal_id = Column(Integer, primary_key=True)
     filial_code = Column(String)
     external_id = Column(String)
-    deal_id = Column(Integer, primary_key=True)
     subfilial_code = Column(String)
     deal_time = Column(Date)
     delivery_number = Column(String)
@@ -56,17 +56,14 @@ class Order(Base):
 
     # Relationships
     order_products = relationship("OrderProduct", back_populates="order")
-    order_gifts = relationship("OrderGift", back_populates="order")
-    order_actions = relationship("OrderAction", back_populates="order")
-    order_consignments = relationship("OrderConsignment", back_populates="order")
 
 class OrderProduct(Base):
     __tablename__ = 'order_products'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey('orders.id'))
+
+    company_code = Column(String, primary_key=True)
+    deal_id = Column(Integer, primary_key=True)
+    product_unit_id = Column(Integer, primary_key=True)
     external_id = Column(String)
-    product_unit_id = Column(Integer)
     product_code = Column(String)
     product_local_code = Column(String)
     product_name = Column(String)
@@ -87,78 +84,3 @@ class OrderProduct(Base):
     vat_percent = Column(Float)
     sold_amount = Column(Float)
     price_type_code = Column(String)
-
-    # Relationship
-    details = relationship("Detail", back_populates="order_product")
-    order = relationship("Order", back_populates="order_products")
-
-class Detail(Base):
-    __tablename__ = 'details'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    order_product_id = Column(Integer, ForeignKey('order_products.id'))
-    expiry_date = Column(Date)
-    card_code = Column(String)
-    batch_number = Column(String)
-    sold_quant = Column(Float)
-
-    # Relationship
-    order_product = relationship("OrderProduct", back_populates="details")
-
-class OrderGift(Base):
-    __tablename__ = 'order_gifts'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey('orders.id'))
-    external_id = Column(String)
-    product_unit_id = Column(Integer)
-    product_code = Column(String)
-    product_local_code = Column(String)
-    product_name = Column(String)
-    serial_number = Column(String)
-    expiry_date = Column(Date)
-    order_quant = Column(Float)
-    sold_quant = Column(Float)
-    return_quant = Column(Float)
-    inventory_kind = Column(String)
-    on_balance = Column(Boolean)
-    card_code = Column(String)
-    warehouse_code = Column(String)
-
-    order = relationship("Order", back_populates="order_gifts")
-
-class OrderAction(Base):
-    __tablename__ = 'order_actions'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey('orders.id'))
-    external_id = Column(String)
-    product_unit_id = Column(Integer)
-    product_code = Column(String)
-    product_local_code = Column(String)
-    product_name = Column(String)
-    serial_number = Column(String)
-    expiry_date = Column(Date)
-    order_quant = Column(Float)
-    sold_quant = Column(Float)
-    return_quant = Column(Float)
-    inventory_kind = Column(String)
-    on_balance = Column(Boolean)
-    card_code = Column(String)
-    warehouse_code = Column(String)
-    bonus_id = Column(String)
-    action_name = Column(String)
-
-    order = relationship("Order", back_populates="order_actions")
-
-class OrderConsignment(Base):
-    __tablename__ = 'order_consignments'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    order_id = Column(Integer, ForeignKey('orders.id'))
-    external_id = Column(String)
-    consignment_unit_id = Column(String)
-    consignment_date = Column(Date)
-    consignment_amount = Column(Float)
-
-    order = relationship("Order", back_populates="order_consignments")
