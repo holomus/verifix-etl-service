@@ -1,10 +1,12 @@
 CREATE TABLE verifix.smartup_pipe_settings(
-  id            BIGINT       NOT NULL GENERATED ALWAYS AS IDENTITY,
-  company_code  VARCHAR(100) NOT NULL,
-  host          VARCHAR(500) NOT NULL,
-  client_id     VARCHAR(500) NOT NULL,
-  client_secret VARCHAR(500) NOT NULL,
-  CONSTRAINT smartup_pipeline_settings_pk PRIMARY KEY (id)
+  id                    BIGINT       NOT NULL GENERATED ALWAYS AS IDENTITY,
+  company_code          VARCHAR(100) NOT NULL,
+  host                  VARCHAR(500) NOT NULL,
+  client_id             VARCHAR(500) NOT NULL,
+  client_secret         VARCHAR(500) NOT NULL,
+  last_execution_time   TIMESTAMP,
+  CONSTRAINT smartup_pipeline_settings_pk PRIMARY KEY (id),
+  CONSTRAINT smartup_pipeline_settings_u1 UNIQUE (company_code)
 );
 
 CREATE TABLE verifix.smartup_orders(
