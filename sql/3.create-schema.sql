@@ -58,8 +58,8 @@ CREATE TABLE verifix.smartup_orders(
 
 CREATE TABLE verifix.smartup_order_products(
   company_code              VARCHAR(100) NOT NULL,
-  deal_id                   BIGINT       NOT NULL,
   product_unit_id           BIGINT       NOT NULL,
+  deal_id                   BIGINT       NOT NULL,
   external_id               VARCHAR(500),
   product_code              VARCHAR(500),
   product_local_code        VARCHAR(500),
@@ -69,7 +69,7 @@ CREATE TABLE verifix.smartup_order_products(
   order_quant               NUMERIC(20,6),
   sold_quant                NUMERIC(20,6),
   return_quant              NUMERIC(20,6),
-  inventory_kind            NUMERIC(20,6),
+  inventory_kind            VARCHAR(500),
   on_balance                BOOLEAN,
   card_code                 VARCHAR(500),
   warehouse_code            VARCHAR(500),
@@ -81,6 +81,8 @@ CREATE TABLE verifix.smartup_order_products(
   vat_percent               NUMERIC(20,6),
   sold_amount               NUMERIC(20,6),
   price_type_code           VARCHAR(500),
-  CONSTRAINT smartup_order_products_pk PRIMARY KEY (company_code, deal_id, product_unit_id),
+  CONSTRAINT smartup_order_products_pk PRIMARY KEY (company_code, product_unit_id),
   CONSTRAINT smartup_order_products_f1 FOREIGN KEY (company_code, deal_id) REFERENCES verifix.smartup_orders(company_code, deal_id) ON DELETE CASCADE
 );
+
+CREATE INDEX smartup_order_products_i1 ON verifix.smartup_order_products(company_code, deal_id) INCLUDE (product_unit_id);

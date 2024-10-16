@@ -1,8 +1,8 @@
 from pydantic import BaseModel
 
 class OrderProductEntity(BaseModel):
-    external_id: str
     product_unit_id: int
+    external_id: str
     product_code: str
     product_name: str
     order_quant: float

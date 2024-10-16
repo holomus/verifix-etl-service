@@ -1,17 +1,13 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, BigInteger, String
 
 from .base import Base
 
-# class PipeSettings(Base):
-#   __tablename__ = 'pipe_settings'
-
-#   id = Column(Integer, primary_key=True, autoincrement=True)
-
+# Model for the verifix.smartup_pipe_settings table
 class SmartupPipeSettings(Base):
-  __tablename__ = 'smartup_pipe_settings'
+    __tablename__ = 'smartup_pipe_settings'
 
-  id = Column(Integer, primary_key=True, autoincrement=True)
-  company_code=Column(String, unique=True, nullable=False)
-  host=Column(String, nullable=False)
-  client_id=Column(String, nullable=False)
-  client_secret=Column(String, nullable=False)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    company_code = Column(String(100), nullable=False)
+    host = Column(String(500), nullable=False)
+    client_id = Column(String(500), nullable=False)
+    client_secret = Column(String(500), nullable=False)

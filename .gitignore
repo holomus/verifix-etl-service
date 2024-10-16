@@ -1,3 +1,8 @@
 .dbeaver
 .project
 sql/Scripts/*
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class

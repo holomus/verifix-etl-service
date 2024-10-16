@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, and_
 from sqlalchemy.dialects.postgresql import insert
 from typing import List
 from models.core import *
@@ -9,87 +9,102 @@ class OrderDAO:
   def __init__(self, session: Session):
     self.session = session
 
-  def upsert_order(self, order: OrderEntity):
+  def upsert_order(self, company_code: str, order: OrderEntity):
     order_data = order.model_dump(exclude_none=True, exclude_unset=True, exclude={
-      "order_products": True,
-      "order_gifts": True,
-      "order_actions": True,
-      "order_consignments": True,
+      "products"
     })
-    
-    upsert_order_stmt = insert(Order).values(**order_data)
-    upsert_order_stmt = upsert_order_stmt.on_conflict_do_update(constraint='orders_pk', set_={ 
-      name: upsert_order_stmt.excluded[name] for name in OrderEntity.model_fields.keys() 
+
+    upsert_order_stmt = insert(SmartupOrders).values(company_code=company_code).values(**order_data)
+    upsert_order_stmt = upsert_order_stmt.on_conflict_do_update(constraint='smartup_orders_pk', set_={ 
+      name: upsert_order_stmt.excluded[name] for name in SmartupOrders.nonprimary_columns()
     })
 
     self.session.execute(upsert_order_stmt)
 
-    upsert_product_stmt = insert(OrderProduct)
-
     product_data_list = [
-      product.model_dump(exclude_none=True, exclude_unset=True) for product in order.products or []
+      {
+        **product.model_dump(exclude_none=True, exclude_unset=True),
+        'company_code': company_code,
+        'deal_id': order.deal_id,
+      } for product in order.products or []
     ]
     
-    upsert_product_stmt = upsert_product_stmt.values(product_data_list)
-    upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='order_products_pk', set_={
-      name: upsert_product_stmt.excluded[name] for name in OrderProductEntity.model_fields.keys() 
+    upsert_product_stmt = insert(SmartupOrderProducts).values(product_data_list)
+    upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='smartup_order_products_pk', set_={
+      name: upsert_product_stmt.excluded[name] for name in SmartupOrderProducts.nonprimary_columns()
     })
-
-    # TODO: add delete ununused products
 
     self.session.execute(upsert_product_stmt)
 
-  def bulk_upsert_order(self, orders: List[OrderEntity]):
+    product_ids = [
+      product.product_unit_id for product in order.products or []
+    ]
+
+    delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
+      SmartupOrderProducts.company_code == company_code,
+      SmartupOrderProducts.deal_id == order.deal_id,
+      SmartupOrderProducts.product_unit_id.not_in(product_ids)
+    ))
+
+    self.session.execute(delete_old_products_stmt)
+
+  def bulk_upsert_order(self, company_code: str, orders: List[OrderEntity]):
     order_data_list = [
-      order.model_dump(exclude_none=True, exclude_unset=True, exclude={
-        "order_products": True,
-        "order_gifts": True,
-        "order_actions": True,
-        "order_consignments": True,
-      }) for order in orders
+      {
+        **order.model_dump(exclude_none=True, exclude_unset=True, exclude={
+          "products"
+        }),
+        'company_code': company_code
+      }
+      for order in orders
     ]
     
-    upsert_order_stmt = insert(Order).values(order_data_list)
-    upsert_order_stmt = upsert_order_stmt.on_conflict_do_update(constraint='orders_pk', set_={ 
-      name: upsert_order_stmt.excluded[name] for name in OrderEntity.model_fields.keys() 
+    upsert_order_stmt = insert(SmartupOrders).values(order_data_list)
+    upsert_order_stmt = upsert_order_stmt.on_conflict_do_update(constraint='smartup_orders_pk', set_={ 
+      name: upsert_order_stmt.excluded[name] for name in SmartupOrders.nonprimary_columns()
     })
 
     self.session.execute(upsert_order_stmt)
 
-    upsert_product_stmt = insert(OrderProduct)
-
     product_data_list = [
-      product.model_dump(exclude_none=True, exclude_unset=True)
+      {
+        **product.model_dump(exclude_none=True, exclude_unset=True),
+        'company_code': company_code,
+        'deal_id': order.deal_id,
+      }
       for order in orders for product in (order.products or [])
     ]
     
-    upsert_product_stmt = upsert_product_stmt.values(product_data_list)
-    upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='order_products_pk', set_={
-      name: upsert_product_stmt.excluded[name] for name in OrderProductEntity.model_fields.keys() 
+    upsert_product_stmt = insert(SmartupOrderProducts).values(product_data_list)
+    upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='smartup_order_products_pk', set_={
+      name: upsert_product_stmt.excluded[name] for name in SmartupOrderProducts.nonprimary_columns()
     })
-
-    # TODO: add delete ununused products
 
     self.session.execute(upsert_product_stmt)
 
-  def get_order_by_id(self, order_id: Integer):
+    deal_ids = [
+      order.deal_id for order in orders
+    ]
+
+    product_ids = [
+      product.product_unit_id for order in orders for product in (order.products or [])
+    ]
+
+    delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
+      SmartupOrderProducts.company_code == company_code,
+      SmartupOrderProducts.deal_id.in_(deal_ids),
+      SmartupOrderProducts.product_unit_id.not_in(product_ids)
+    ))
+
+    self.session.execute(delete_old_products_stmt)
+
+
+  def get_order_by_id(self, company_code: str, deal_id: int):
     return self.session.execute(
-      select(Order).where(Order.id == order_id)
+      select(SmartupOrders).where(and_(SmartupOrders.company_code == company_code, SmartupOrders.deal_id == deal_id))
     ).first()
 
-  def update_order(self, order: OrderEntity):
-    pass
-    # self.session.execute(
-    #   update(Order)
-    #     .where(Order.id == order.deal_id)
-    # )
-    # order = self.session.query(Order).filter(Order.id == order_id).first()
-    # if order:
-    #   for key, value in update_data.items():
-    #     setattr(order, key, value)
-    #   self.session.commit()
-
-  def delete_order(self, order_id: Integer):
+  def delete_order(self, company_code: str, deal_id: int):
     self.session.execute(
-      delete(Order).where(Order.id == order_id)
+      delete(SmartupOrders).where(and_(SmartupOrders.company_code == company_code, SmartupOrders.deal_id == deal_id))
     )

@@ -1,1 +1,2 @@
-from core import Order
+from .core import SmartupOrders, SmartupOrderProducts
+from .settings import SmartupPipeSettings
