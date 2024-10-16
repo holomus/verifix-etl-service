@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, update, delete, and_
 from sqlalchemy.dialects.postgresql import insert
-from typing import List
 from models.core import *
 from entities import *
 
@@ -48,7 +47,7 @@ class OrderDAO:
 
     self.session.execute(delete_old_products_stmt)
 
-  def bulk_upsert_order(self, company_code: str, orders: List[OrderEntity]):
+  def bulk_upsert_order(self, company_code: str, orders: list[OrderEntity]):
     order_data_list = [
       {
         **order.model_dump(exclude_none=True, exclude_unset=True, exclude={

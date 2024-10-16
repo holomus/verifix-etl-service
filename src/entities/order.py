@@ -1,19 +1,34 @@
 from datetime import date, datetime
-from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from .order_product import OrderProductEntity
 
 class OrderEntity(BaseModel):
-    deal_id: int
-    filial_code: str
-    external_id: str
-    delivery_date: date
-    booked_date: date
-    total_amount: float
-    room_name: str
-    deal_time: datetime
-    status: str
-    currency_code: str
-    delivery_number: str
-    manager_code: str
-    products: List[OrderProductEntity] | None = []
+  deal_id: int
+  filial_code: str | None
+  external_id: str | None
+  delivery_date: date | None
+  booked_date: date | None
+  total_amount: float | None
+  room_name: str | None
+  deal_time: datetime | None
+  status: str | None
+  currency_code: str | None
+  delivery_number: str | None
+  manager_code: str | None
+  products: list[OrderProductEntity] | None = []
+
+  @field_validator('deal_time', mode='before')
+  @classmethod
+  def parse_datetime(cls, value):
+      if isinstance(value, str):
+          # Parse string with the custom format "DD.MM.YYYY HH:MM:SS"
+          return datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
+      return value
+
+  @field_validator('booked_date', 'delivery_date', mode='before')
+  @classmethod
+  def parse_date(cls, value):
+      if isinstance(value, str):
+          # Parse string with the custom format "DD.MM.YYYY"
+          return datetime.strptime(value, "%d.%m.%Y").date()
+      return value

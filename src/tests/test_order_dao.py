@@ -1,8 +1,8 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from datetime import date, datetime
 from daos import OrderDAO
 from entities import OrderEntity, OrderProductEntity
-from datetime import date, datetime
 
 # Replace with your actual PostgreSQL credentials
 DATABASE_URL = "postgresql://verifix:verifix@localhost:5432/verifix_etl_db"
