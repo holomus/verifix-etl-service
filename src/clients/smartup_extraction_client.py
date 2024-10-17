@@ -1,14 +1,14 @@
 import requests
-import json
 from entities import OrderEntity, SmartupCredentials, SmartupOrderFilters
 
 class SmartupExtractionClient:
   ACCESS_TOKEN_PATH = "{}/security/oauth/token"
   DEALS_EXPORT_PATH = "{}/b/trade/txs/tdeal/order$export"
-
-  def _get_access_token(self, credentials: SmartupCredentials) -> str:
+  
+  @classmethod
+  def _get_access_token(cls, credentials: SmartupCredentials) -> str:
     response = requests.post(
-      self.ACCESS_TOKEN_PATH.format(credentials.host),
+      cls.ACCESS_TOKEN_PATH.format(credentials.host),
       timeout=(5, 300),
       json={
         'grant_type': 'client_credentials',
@@ -25,12 +25,12 @@ class SmartupExtractionClient:
 
     return response['access_token']
 
-
-  def extractDeals(self, credentials: SmartupCredentials, filters: SmartupOrderFilters) -> list[OrderEntity]:
-    access_token = self._get_access_token(credentials)
+  @classmethod
+  def extractDeals(cls, credentials: SmartupCredentials, filters: SmartupOrderFilters) -> list[OrderEntity]:
+    access_token = cls._get_access_token(credentials)
 
     response = requests.post(
-      self.DEALS_EXPORT_PATH.format(credentials.host),
+      cls.DEALS_EXPORT_PATH.format(credentials.host),
       headers={
         'Authorization': 'Bearer {}'.format(access_token),
         'project_code': 'trade',

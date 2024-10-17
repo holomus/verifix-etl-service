@@ -1,8 +1,10 @@
 from datetime import date, datetime
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 from .order_product import OrderProductEntity
 
 class OrderEntity(BaseModel):
+  model_config = ConfigDict(from_attributes=True)
+
   deal_id: int
   filial_code: str | None
   external_id: str | None
@@ -20,15 +22,15 @@ class OrderEntity(BaseModel):
   @field_validator('deal_time', mode='before')
   @classmethod
   def parse_datetime(cls, value):
-      if isinstance(value, str):
-          # Parse string with the custom format "DD.MM.YYYY HH:MM:SS"
-          return datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
-      return value
+    if isinstance(value, str):
+      # Parse string with the custom format "DD.MM.YYYY HH:MM:SS"
+      return datetime.strptime(value, "%d.%m.%Y %H:%M:%S")
+    return value
 
   @field_validator('booked_date', 'delivery_date', mode='before')
   @classmethod
   def parse_date(cls, value):
-      if isinstance(value, str):
-          # Parse string with the custom format "DD.MM.YYYY"
-          return datetime.strptime(value, "%d.%m.%Y").date()
-      return value
+    if isinstance(value, str):
+      # Parse string with the custom format "DD.MM.YYYY"
+      return datetime.strptime(value, "%d.%m.%Y").date()
+    return value

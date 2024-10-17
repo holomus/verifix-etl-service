@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select, update, delete, and_
+from sqlalchemy import select, delete, and_
 from sqlalchemy.dialects.postgresql import insert
 from models.core import *
 from entities import *
@@ -8,7 +8,7 @@ class OrderDAO:
   def __init__(self, session: Session):
     self.session = session
 
-  def upsert_order(self, company_code: str, order: OrderEntity):
+  def upsert_order(self, company_code: str, order: OrderEntity) -> None:
     order_data = order.model_dump(exclude_none=True, exclude_unset=True, exclude={
       "products"
     })
@@ -47,7 +47,7 @@ class OrderDAO:
 
     self.session.execute(delete_old_products_stmt)
 
-  def bulk_upsert_order(self, company_code: str, orders: list[OrderEntity]):
+  def bulk_upsert_orders(self, company_code: str, orders: list[OrderEntity]) -> None:
     order_data_list = [
       {
         **order.model_dump(exclude_none=True, exclude_unset=True, exclude={
@@ -97,13 +97,13 @@ class OrderDAO:
 
     self.session.execute(delete_old_products_stmt)
 
-
-  def get_order_by_id(self, company_code: str, deal_id: int):
-    return self.session.execute(
+  def get_order_by_id(self, company_code: str, deal_id: int) -> OrderEntity:
+    order = self.session.execute(
       select(SmartupOrders).where(and_(SmartupOrders.company_code == company_code, SmartupOrders.deal_id == deal_id))
-    ).first()
+    ).first() 
+    return OrderEntity.model_validate(order)
 
-  def delete_order(self, company_code: str, deal_id: int):
+  def delete_order(self, company_code: str, deal_id: int) -> None:
     self.session.execute(
       delete(SmartupOrders).where(and_(SmartupOrders.company_code == company_code, SmartupOrders.deal_id == deal_id))
     )
