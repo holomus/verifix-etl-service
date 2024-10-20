@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, insert, update, delete
-from entities import SmartupCredentials
+from entities import SmartupCredentials, NewSmartupCredentials
 from models import SmartupPipeSettings
 from datetime import datetime
 
@@ -8,7 +8,7 @@ class PipeSettingsDAO:
   def __init__(self, session: Session):
     self.session = session
   
-  def insert_pipe_setting(self, credentials: SmartupCredentials) -> int:
+  def insert_pipe_settings(self, credentials: NewSmartupCredentials) -> int:
     insert_stmt = insert(SmartupPipeSettings).values(**credentials.model_dump(exclude_none=True, exclude_unset=True))
     insert_stmt = insert_stmt.returning(SmartupPipeSettings.id)
 
@@ -19,6 +19,15 @@ class PipeSettingsDAO:
 
     return user_id
 
+  def update_pipe_settings(self, credentials: SmartupCredentials):
+    update_stmt = (
+      update(SmartupPipeSettings).
+       where(SmartupPipeSettings.id == credentials.id).
+      values(credentials.model_dump(exclude_none=True, exclude_unset=True, exclude={ 'id' }))
+    )
+
+    self.session.execute(update_stmt)
+
   def update_pipe_last_executed(self, id: int) -> None:
     update_stmt = (
       update(SmartupPipeSettings).
@@ -28,7 +37,7 @@ class PipeSettingsDAO:
 
     self.session.execute(update_stmt)
 
-  def get_pipe_setting_by_id(self, id: int) -> SmartupCredentials | None:
+  def get_pipe_settings_by_id(self, id: int) -> SmartupCredentials | None:
     select_stmt = (
       select(SmartupPipeSettings).
        where(SmartupPipeSettings.id == id)
@@ -52,7 +61,7 @@ class PipeSettingsDAO:
       SmartupCredentials.model_validate(setting) for setting in settings
     ]
 
-  def delete_pipe_setting_by_id(self, id: int) -> None:
+  def delete_pipe_settings_by_id(self, id: int) -> None:
     delete_stmt = (
       delete(SmartupPipeSettings).
        where(SmartupPipeSettings.id == id)
