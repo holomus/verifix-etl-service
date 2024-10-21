@@ -8,7 +8,7 @@ class NewSmartupCredentials(BaseModel):
   host: str
   client_id: str
   client_secret: str
-  last_update_time: datetime | None = None
+  last_execution_time: datetime | None = None
 
 class SmartupCredentials(NewSmartupCredentials):
   id: int

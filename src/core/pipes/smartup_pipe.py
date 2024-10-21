@@ -23,10 +23,10 @@ class SmartupPipe:
       pipeDao = PipeSettingsDAO(session)
 
       orderDao.bulk_upsert_orders(company_code=self._credentials.company_code, orders=orders)
-      pipeDao.update_pipe_last_executed(id=self._credentials.id)
+      pipeDao.update_pipe_last_executed(id=self._credentials.id, execution_time=end_load_time)
 
   def extract_data_since(self, start_load_time: datetime | None):
-    start_load_time = start_load_time or self._credentials.last_update_time or datetime.now() - 2 * self._pagination_timedelta
+    start_load_time = start_load_time or self._credentials.last_execution_time or datetime.now() - 2 * self._pagination_timedelta
 
     end_load_time = datetime.now()
     

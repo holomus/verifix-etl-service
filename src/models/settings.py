@@ -11,4 +11,4 @@ class SmartupPipeSettings(Base):
     host = Column(String(500), nullable=False)
     client_id = Column(String(500), nullable=False)
     client_secret = Column(String(500), nullable=False)
-    last_update_time = Column(DateTime)
+    last_execution_time = Column(DateTime)

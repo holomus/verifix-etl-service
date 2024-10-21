@@ -19,20 +19,22 @@ class PipeSettingsDAO:
 
     return user_id
 
-  def update_pipe_settings(self, credentials: SmartupCredentials):
+  def update_pipe_settings(self, credentials: SmartupCredentials) -> int:
     update_stmt = (
       update(SmartupPipeSettings).
        where(SmartupPipeSettings.id == credentials.id).
       values(credentials.model_dump(exclude_none=True, exclude_unset=True, exclude={ 'id' }))
     )
 
-    self.session.execute(update_stmt)
+    result = self.session.execute(update_stmt)
 
-  def update_pipe_last_executed(self, id: int) -> None:
+    return result.rowcount
+
+  def update_pipe_last_executed(self, id: int, execution_time: datetime) -> None:
     update_stmt = (
       update(SmartupPipeSettings).
        where(SmartupPipeSettings.id == id).
-      values(last_update_time = datetime.now())
+      values(last_execution_time = execution_time)
     )
 
     self.session.execute(update_stmt)
