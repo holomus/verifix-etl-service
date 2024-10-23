@@ -1,15 +1,15 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, and_
 from sqlalchemy.dialects.postgresql import insert
 from models.core import *
 from entities import *
 
 class OrderDAO:
-  def __init__(self, session: Session):
+  def __init__(self, session: AsyncSession):
     self.session = session
 
-  def upsert_order(self, company_code: str, order: OrderEntity) -> None:
-    order_data = order.model_dump(exclude_none=True, exclude_unset=True, exclude={
+  async def upsert_order(self, company_code: str, order: OrderEntity) -> None:
+    order_data = order.model_dump(exclude={
       "products"
     })
 
@@ -18,39 +18,43 @@ class OrderDAO:
       name: upsert_order_stmt.excluded[name] for name in SmartupOrders.nonprimary_columns()
     })
 
-    self.session.execute(upsert_order_stmt)
+    await self.session.execute(upsert_order_stmt)
 
-    product_data_list = [
-      {
-        **product.model_dump(exclude_none=True, exclude_unset=True),
-        'company_code': company_code,
-        'deal_id': order.deal_id,
-      } for product in order.products or []
-    ]
-    
-    upsert_product_stmt = insert(SmartupOrderProducts).values(product_data_list)
-    upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='smartup_order_products_pk', set_={
-      name: upsert_product_stmt.excluded[name] for name in SmartupOrderProducts.nonprimary_columns()
-    })
+    if order.products is not None and len(order.products) > 0:
+      product_data_list = [
+        {
+          **product.model_dump(),
+          'company_code': company_code,
+          'deal_id': order.deal_id,
+        } for product in order.products or []
+      ]
+      
+      upsert_product_stmt = insert(SmartupOrderProducts).values(product_data_list)
+      upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='smartup_order_products_pk', set_={
+        name: upsert_product_stmt.excluded[name] for name in SmartupOrderProducts.nonprimary_columns()
+      })
 
-    self.session.execute(upsert_product_stmt)
+      await self.session.execute(upsert_product_stmt)
 
-    product_ids = [
-      product.product_unit_id for product in order.products or []
-    ]
+      product_ids = [
+        product.product_unit_id for product in order.products or []
+      ]
 
-    delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
-      SmartupOrderProducts.company_code == company_code,
-      SmartupOrderProducts.deal_id == order.deal_id,
-      SmartupOrderProducts.product_unit_id.not_in(product_ids)
-    ))
+      delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
+        SmartupOrderProducts.company_code == company_code,
+        SmartupOrderProducts.deal_id == order.deal_id,
+        SmartupOrderProducts.product_unit_id.not_in(product_ids)
+      ))
 
-    self.session.execute(delete_old_products_stmt)
+      await self.session.execute(delete_old_products_stmt)
 
-  def bulk_upsert_orders(self, company_code: str, orders: list[OrderEntity]) -> None:
+  async def bulk_upsert_orders(self, company_code: str, orders: list[OrderEntity]) -> None:
+    if len(orders) == 0: 
+      return
+
     order_data_list = [
       {
-        **order.model_dump(exclude_none=True, exclude_unset=True, exclude={
+        **order.model_dump(exclude={
           "products"
         }),
         'company_code': company_code
@@ -63,47 +67,52 @@ class OrderDAO:
       name: upsert_order_stmt.excluded[name] for name in SmartupOrders.nonprimary_columns()
     })
 
-    self.session.execute(upsert_order_stmt)
+    await self.session.execute(upsert_order_stmt)
 
-    product_data_list = [
-      {
-        **product.model_dump(exclude_none=True, exclude_unset=True),
+    product_data_list = {
+      product.product_unit_id: {
+        **product.model_dump(),
         'company_code': company_code,
         'deal_id': order.deal_id,
       }
       for order in orders for product in (order.products or [])
-    ]
-    
-    upsert_product_stmt = insert(SmartupOrderProducts).values(product_data_list)
-    upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='smartup_order_products_pk', set_={
-      name: upsert_product_stmt.excluded[name] for name in SmartupOrderProducts.nonprimary_columns()
-    })
+    }
 
-    self.session.execute(upsert_product_stmt)
+    # get unique products from order list
+    product_data_list = [*product_data_list.values()]
 
-    deal_ids = [
-      order.deal_id for order in orders
-    ]
+    if len(product_data_list) > 0:
+      upsert_product_stmt = insert(SmartupOrderProducts).values(product_data_list)
+      upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='smartup_order_products_pk', set_={
+        name: upsert_product_stmt.excluded[name] for name in SmartupOrderProducts.nonprimary_columns()
+      })
 
-    product_ids = [
-      product.product_unit_id for order in orders for product in (order.products or [])
-    ]
+      await self.session.execute(upsert_product_stmt)
 
-    delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
-      SmartupOrderProducts.company_code == company_code,
-      SmartupOrderProducts.deal_id.in_(deal_ids),
-      SmartupOrderProducts.product_unit_id.not_in(product_ids)
-    ))
+      deal_ids = [
+        order.deal_id for order in orders
+      ]
 
-    self.session.execute(delete_old_products_stmt)
+      product_ids = [
+        product.product_unit_id for order in orders for product in (order.products or [])
+      ]
 
-  def get_order_by_id(self, company_code: str, deal_id: int) -> OrderEntity:
-    order = self.session.execute(
+      delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
+        SmartupOrderProducts.company_code == company_code,
+        SmartupOrderProducts.deal_id.in_(deal_ids),
+        SmartupOrderProducts.product_unit_id.not_in(product_ids)
+      ))
+
+      await self.session.execute(delete_old_products_stmt)
+
+  async def get_order_by_id(self, company_code: str, deal_id: int) -> OrderEntity:
+    order = await self.session.execute(
       select(SmartupOrders).where(and_(SmartupOrders.company_code == company_code, SmartupOrders.deal_id == deal_id))
-    ).first() 
+    )
+    order = order.first()
     return OrderEntity.model_validate(order)
 
-  def delete_order(self, company_code: str, deal_id: int) -> None:
-    self.session.execute(
+  async def delete_order(self, company_code: str, deal_id: int) -> None:
+    await self.session.execute(
       delete(SmartupOrders).where(and_(SmartupOrders.company_code == company_code, SmartupOrders.deal_id == deal_id))
     )

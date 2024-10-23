@@ -1,4 +1,4 @@
-import requests
+from async_client import httpx_client
 from entities import OrderEntity, SmartupCredentials, SmartupOrderFilters
 
 class SmartupExtractionClient:
@@ -6,10 +6,9 @@ class SmartupExtractionClient:
   DEALS_EXPORT_PATH = "{}/b/trade/txs/tdeal/order$export"
   
   @classmethod
-  def _get_access_token(cls, credentials: SmartupCredentials) -> str:
-    response = requests.post(
+  async def _get_access_token(cls, credentials: SmartupCredentials) -> str:
+    response = await httpx_client.post(
       cls.ACCESS_TOKEN_PATH.format(credentials.host),
-      timeout=(5, 300),
       json={
         'grant_type': 'client_credentials',
         'client_id': credentials.client_id,
@@ -26,17 +25,16 @@ class SmartupExtractionClient:
     return response['access_token']
 
   @classmethod
-  def extractDeals(cls, credentials: SmartupCredentials, filters: SmartupOrderFilters) -> list[OrderEntity]:
-    access_token = cls._get_access_token(credentials)
+  async def extractDeals(cls, credentials: SmartupCredentials, filters: SmartupOrderFilters) -> list[OrderEntity]:
+    access_token = await cls._get_access_token(credentials)
 
-    response = requests.post(
+    response = await httpx_client.post(
       cls.DEALS_EXPORT_PATH.format(credentials.host),
       headers={
         'Authorization': 'Bearer {}'.format(access_token),
         'project_code': 'trade',
       },
-      timeout=(5, 600),
-      data=filters.model_dump_json(exclude_none=True, exclude_unset=True)
+      data=filters.model_dump(exclude_none=True, exclude_unset=True)
     )
 
     if response.status_code != 200:
