@@ -7,7 +7,7 @@ from .scheduler_instance import scheduler
 
 def start_extraction_on(credentials: SmartupCredentials):
   pipe = SmartupPipe(credentials)
-  scheduler.add_job(pipe.extract_data_since, id=credentials.company_code)
+  scheduler.add_job(pipe.extract_data_since, id=str(credentials.id))
 
 async def start_extraction_on_all_pipes():
   async with Session.begin() as session:

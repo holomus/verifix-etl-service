@@ -42,7 +42,7 @@ async def update_pipe(settings: SmartupCredentials) -> None:
     await dao.update_pipe_settings(settings)
     credentials= await dao.get_pipe_settings_by_id(settings.id)
   
-  if credentials is not None:
+  if credentials is not None and settings.last_execution_time is not None:
     start_extraction_on(credentials)
 
 @router.post('/', response_model=SmartupCreatePipeResponse)

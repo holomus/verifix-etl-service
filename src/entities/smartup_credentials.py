@@ -5,6 +5,7 @@ class NewSmartupCredentials(BaseModel):
   model_config = ConfigDict(from_attributes=True)
 
   company_code: str
+  filial_codes: list[str] = []
   host: str
   client_id: str
   client_secret: str

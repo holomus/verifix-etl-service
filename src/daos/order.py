@@ -29,12 +29,12 @@ class OrderDAO:
         } for product in order.products or []
       ]
       
-      upsert_product_stmt = insert(SmartupOrderProducts).values(product_data_list)
+      upsert_product_stmt = insert(SmartupOrderProducts)
       upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='smartup_order_products_pk', set_={
         name: upsert_product_stmt.excluded[name] for name in SmartupOrderProducts.nonprimary_columns()
       })
 
-      await self.session.execute(upsert_product_stmt)
+      await self.session.execute(upsert_product_stmt, product_data_list)
 
       product_ids = [
         product.product_unit_id for product in order.products or []
@@ -62,12 +62,12 @@ class OrderDAO:
       for order in orders
     ]
     
-    upsert_order_stmt = insert(SmartupOrders).values(order_data_list)
+    upsert_order_stmt = insert(SmartupOrders)
     upsert_order_stmt = upsert_order_stmt.on_conflict_do_update(constraint='smartup_orders_pk', set_={ 
       name: upsert_order_stmt.excluded[name] for name in SmartupOrders.nonprimary_columns()
     })
 
-    await self.session.execute(upsert_order_stmt)
+    await self.session.execute(upsert_order_stmt, order_data_list)
 
     product_data_list = {
       product.product_unit_id: {
@@ -82,12 +82,12 @@ class OrderDAO:
     product_data_list = [*product_data_list.values()]
 
     if len(product_data_list) > 0:
-      upsert_product_stmt = insert(SmartupOrderProducts).values(product_data_list)
+      upsert_product_stmt = insert(SmartupOrderProducts)
       upsert_product_stmt = upsert_product_stmt.on_conflict_do_update(constraint='smartup_order_products_pk', set_={
         name: upsert_product_stmt.excluded[name] for name in SmartupOrderProducts.nonprimary_columns()
       })
 
-      await self.session.execute(upsert_product_stmt)
+      await self.session.execute(upsert_product_stmt, product_data_list)
 
       deal_ids = [
         order.deal_id for order in orders

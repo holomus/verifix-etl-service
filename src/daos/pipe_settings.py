@@ -9,7 +9,7 @@ class PipeSettingsDAO:
     self.session = session
   
   async def insert_pipe_settings(self, credentials: NewSmartupCredentials) -> int:
-    insert_stmt = insert(SmartupPipeSettings).values(**credentials.model_dump(exclude_none=True, exclude_unset=True))
+    insert_stmt = insert(SmartupPipeSettings).values(**credentials.model_dump(exclude_none=True))
     insert_stmt = insert_stmt.returning(SmartupPipeSettings.id)
 
     user_id = await self.session.scalar(insert_stmt)

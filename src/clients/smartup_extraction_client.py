@@ -1,5 +1,5 @@
 from async_client import httpx_client
-from entities import OrderEntity, SmartupCredentials, SmartupOrderFilters
+from entities import OrderEntity, SmartupCredentials, SmartupOrderFilters, SmartupOrderFilialFilters
 
 class SmartupExtractionClient:
   ACCESS_TOKEN_PATH = "{}/security/oauth/token"
@@ -28,13 +28,17 @@ class SmartupExtractionClient:
   async def extractDeals(cls, credentials: SmartupCredentials, filters: SmartupOrderFilters) -> list[OrderEntity]:
     access_token = await cls._get_access_token(credentials)
 
+    filters.filial_codes = [
+      SmartupOrderFilialFilters(filial_code=filial_code) for filial_code in credentials.filial_codes
+    ]
+
     response = await httpx_client.post(
       cls.DEALS_EXPORT_PATH.format(credentials.host),
       headers={
         'Authorization': 'Bearer {}'.format(access_token),
         'project_code': 'trade',
       },
-      data=filters.model_dump(exclude_none=True, exclude_unset=True)
+      json=filters.model_dump(exclude_none=True, exclude_unset=True)
     )
 
     if response.status_code != 200:
