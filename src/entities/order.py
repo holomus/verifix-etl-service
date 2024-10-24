@@ -8,15 +8,47 @@ class OrderEntity(BaseModel):
   deal_id: int
   filial_code: str | None
   external_id: str | None
-  delivery_date: date | None
-  booked_date: date | None
-  total_amount: float | None
-  room_name: str | None
-  deal_time: datetime | None
-  status: str | None
-  currency_code: str | None
+  subfilial_code: str | None
+  deal_time: datetime
   delivery_number: str | None
+  delivery_date: date
+  booked_date: date
+  total_amount: float
+  room_id: int
+  room_code: str | None
+  room_name: str
+  robot_code: str | None
+  lap_code: str | None
+  sales_manager_id: int
+  sales_manager_code: str | None
+  sales_manager_name: str
+  expeditor_id: int | None
+  expeditor_code: str | None
+  expeditor_name: str | None
+  person_id: int
+  person_code: str | None
+  person_name: str
+  person_local_code: str | None
+  person_latitude: float | None
+  person_longitude: float | None
+  person_tin: str | None
+  currency_code: str | None
+  owner_person_code: str | None
   manager_code: str | None
+  van_code: str | None
+  contract_code: str | None
+  contract_number: str | None
+  invoice_number: str | None
+  payment_type_code: str | None
+  visit_payment_type_code: str | None
+  note: str | None
+  deal_note: str | None
+  status: str
+  with_marking: bool
+  self_shipment: bool
+  total_weight_netto: float | None
+  total_weight_brutto: float | None
+  total_litre: float | None
   products: list[OrderProductEntity] | None = []
 
   @field_validator('deal_time', mode='before')
