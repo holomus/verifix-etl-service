@@ -88,3 +88,23 @@ CREATE TABLE verifix.smartup_order_products(
 );
 
 CREATE INDEX smartup_order_products_i1 ON verifix.smartup_order_products(company_code, deal_id) INCLUDE (product_unit_id);
+
+CREATE TABLE verifix.smartup_order_product_aggregates(
+  company_code              VARCHAR(100)  NOT NULL,
+  sales_manager_id          BIGINT        NOT NULL,
+  filial_code               VARCHAR(500)  NOT NULL,
+  room_id                   BIGINT        NOT NULL,
+  person_id                 BIGINT        NOT NULL,
+  product_code              VARCHAR(500)  NOT NULL,
+  delivery_date             DATE          NOT NULL,
+  deal_id                   BIGINT        NOT NULL,
+  sold_amount               NUMERIC(20,6) NOT NULL,
+  sold_quantity             NUMERIC(20,6) NOT NULL,
+  sold_weight               NUMERIC(20,6) NOT NULL,
+  CONSTRAINT smartup_order_product_aggregates_pk PRIMARY KEY (company_code, sales_manager_id, filial_code, room_id, person_id, product_code, delivery_date)
+);
+
+CREATE INDEX smartup_order_product_aggregates_i1 on verifix.smartup_order_product_aggregates(company_code, sales_manager_id, filial_code, delivery_date) INCLUDE (deal_id, sold_amount, sold_quantity, sold_weight);
+CREATE INDEX smartup_order_product_aggregates_i2 on verifix.smartup_order_product_aggregates(company_code, sales_manager_id, filial_code, person_id, delivery_date) INCLUDE (deal_id, sold_amount, sold_quantity, sold_weight);
+CREATE INDEX smartup_order_product_aggregates_i3 on verifix.smartup_order_product_aggregates(company_code, sales_manager_id, filial_code, product_code, delivery_date) INCLUDE (deal_id, sold_amount, sold_quantity, sold_weight);
+CREATE INDEX smartup_order_product_aggregates_i4 on verifix.smartup_order_product_aggregates(company_code, sales_manager_id, filial_code, room_id, delivery_date) INCLUDE (deal_id, sold_amount, sold_quantity, sold_weight);

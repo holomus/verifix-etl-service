@@ -1,12 +1,54 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import insert
 from models.core import *
 from entities import *
 
 class OrderDAO:
+  SMARTUP_ORDER_STATUS_ARCHIVED = 'A'
+
   def __init__(self, session: AsyncSession):
     self.session = session
+
+  async def aggregate_order_products(self, company_code: str, product_unit_ids: list[int]):
+    upsert_stmt = insert(SmartupOrderProductAggregates)
+    upsert_stmt = upsert_stmt.on_conflict_do_update(constraint='smartup_order_product_aggregates_pk', set_={
+      name: upsert_stmt.excluded[name] for name in SmartupOrderProductAggregates.nonprimary_columns()
+    })
+
+    select_stmt = select(
+      SmartupOrders.company_code,
+      SmartupOrders.sales_manager_id,
+      SmartupOrders.filial_code,
+      SmartupOrders.room_id,
+      SmartupOrders.person_id,
+      SmartupOrderProducts.product_code,
+      SmartupOrders.delivery_date,
+    ).where(
+      and_(
+        SmartupOrderProducts.company_code == company_code,
+        SmartupOrderProducts.product_unit_id.in_(product_unit_ids),
+        SmartupOrders.status == self.SMARTUP_ORDER_STATUS_ARCHIVED,
+        SmartupOrders.filial_code.is_not(None),
+        SmartupOrderProducts.product_code.is_not(None)
+      )
+    ).join(SmartupOrders, 
+      and_(
+        SmartupOrders.company_code == company_code,
+        SmartupOrders.deal_id == SmartupOrderProducts.deal_id
+      )
+    ).group_by(
+      SmartupOrders.company_code,
+      SmartupOrders.sales_manager_id,
+      SmartupOrders.filial_code,
+      SmartupOrders.room_id,
+      SmartupOrders.person_id,
+      SmartupOrderProducts.product_code,
+      SmartupOrders.delivery_date
+    )
+
+    
 
   async def upsert_order(self, company_code: str, order: OrderEntity) -> None:
     order_data = order.model_dump(exclude={
@@ -69,17 +111,17 @@ class OrderDAO:
 
     await self.session.execute(upsert_order_stmt, order_data_list)
 
-    product_data_list = {
-      product.product_unit_id: {
+    product_data_list = [
+      {
         **product.model_dump(),
         'company_code': company_code,
         'deal_id': order.deal_id,
       }
       for order in orders for product in (order.products or [])
-    }
+    ]
 
     # get unique products from order list
-    product_data_list = [*product_data_list.values()]
+    # product_data_list = [*product_data_list.values()]
 
     if len(product_data_list) > 0:
       upsert_product_stmt = insert(SmartupOrderProducts)
