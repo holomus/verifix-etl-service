@@ -17,6 +17,55 @@ CREATE TABLE verifix.smartup_pipe_credentials(
   CONSTRAINT smartup_pipe_credentials_f1 FOREIGN KEY (pipe_id) REFERENCES verifix.smartup_pipes(id) ON DELETE CASCADE
 );
 
+CREATE TABLE verifix.smartup_legal_persons(
+  pipe_id                   BIGINT        NOT NULL,
+  person_id                 BIGINT        NOT NULL,
+  name                      VARCHAR(500)  NOT NULL,
+  short_name                VARCHAR(500)  NOT NULL,
+  code                      VARCHAR(100),
+  region_code               VARCHAR(500),
+  CONSTRAINT smartup_legal_persons_pk PRIMARY KEY (pipe_id, person_id)
+);
+
+CREATE INDEX smartup_legal_persons_i1 on verifix.smartup_legal_persons(pipe_id, region_code);
+
+CREATE TABLE verifix.smartup_legal_person_types(
+  pipe_id                   BIGINT        NOT NULL,
+  person_group_code         VARCHAR(500)  NOT NULL,
+  person_id                 BIGINT        NOT NULL,
+  person_type_code          VARCHAR(500)  NOT NULL,
+  CONSTRAINT smartup_legal_person_types_pk PRIMARY KEY (pipe_id, person_group_code, person_id),
+  CONSTRAINT smartup_legal_person_types_f1 FOREIGN KEY (pipe_id, person_id) REFERENCES verifix.smartup_legal_persons(pipe_id, person_id) ON DELETE CASCADE
+);
+
+CREATE INDEX smartup_legal_person_types_i1 on verifix.smartup_legal_person_types(pipe_id, person_type_code, person_group_code);
+CREATE INDEX smartup_legal_person_types_i2 on verifix.smartup_legal_person_types(pipe_id, person_type_code);
+CREATE INDEX smartup_legal_person_types_i3 on verifix.smartup_legal_person_types(pipe_id, person_group_code);
+
+CREATE TABLE verifix.smartup_products(
+  pipe_id                   BIGINT         NOT NULL,
+  product_id                BIGINT         NOT NULL,
+  code                      VARCHAR(500),
+  name                      VARCHAR(500)   NOT NULL,
+  weight_netto              NUMERIC(10, 4),
+  weight_brutto             NUMERIC(10, 4),
+  litr                      NUMERIC(10, 4),
+  CONSTRAINT smartup_products_pk PRIMARY KEY (pipe_id, product_id)
+);
+
+CREATE TABLE verifix.smartup_product_types(
+  pipe_id                   BIGINT         NOT NULL,
+  product_group_code        VARCHAR(500)   NOT NULL,
+  product_id                BIGINT         NOT NULL,
+  product_type_code         VARCHAR(500)   NOT NULL,
+  CONSTRAINT smartup_product_types_pk PRIMARY KEY (pipe_id, product_group_code, product_id),
+  CONSTRAINT smartup_product_types_f1 FOREIGN KEY (pipe_id, product_id) REFERENCES verifix.smartup_products(pipe_id, product_id) ON DELETE CASCADE
+);
+
+CREATE INDEX smartup_product_types_i1 on verifix.smartup_product_types(pipe_id, product_type_code, product_group_code);
+CREATE INDEX smartup_product_types_i2 on verifix.smartup_product_types(pipe_id, product_type_code);
+CREATE INDEX smartup_product_types_i3 on verifix.smartup_product_types(pipe_id, product_group_code);
+
 CREATE TABLE verifix.smartup_orders(
   pipe_id                   BIGINT        NOT NULL,
   deal_id                   BIGINT        NOT NULL,
