@@ -1,6 +1,6 @@
 from async_client import httpx_client
 from httpx import Auth
-from entities import OrderEntity, SmartupCredentials, SmartupOrderFilters, SmartupOrderFilialFilters
+from entities import OrderEntity, SmartupFilialCredentials, SmartupOrderFilters
 
 class SmartupAuth(Auth):
   def __init__(self, host: str, token: str):
@@ -16,9 +16,9 @@ class SmartupExtractionClient:
   DEALS_EXPORT_PATH = "{}/b/trade/txs/tdeal/order$export"
 
   @classmethod
-  async def get_access_token(cls, credentials: SmartupCredentials) -> str:
+  async def get_access_token(cls, host: str, credentials: SmartupFilialCredentials) -> str:
     response = await httpx_client.post(
-      cls.ACCESS_TOKEN_PATH.format(credentials.host),
+      cls.ACCESS_TOKEN_PATH.format(host),
       json={
         'grant_type': 'client_credentials',
         'client_id': credentials.client_id,

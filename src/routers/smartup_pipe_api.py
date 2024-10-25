@@ -55,8 +55,7 @@ async def create_pipe(settings: NewSmartupCredentials) -> SmartupCreatePipeRespo
       id=pipe_id,
       company_code=settings.company_code,
       host=settings.host,
-      client_id=settings.client_id,
-      client_secret=settings.client_secret,
+      filials=settings.filials,
       last_execution_time=settings.last_execution_time
     )
 

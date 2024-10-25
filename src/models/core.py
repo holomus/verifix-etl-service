@@ -8,7 +8,7 @@ from .base import Base
 class SmartupOrders(Base):
   __tablename__ = 'smartup_orders'
 
-  company_code = Column(String(100), primary_key=True, nullable=False)
+  pipe_id = Column(BigInteger, primary_key=True, nullable=False)
   deal_id = Column(BigInteger, primary_key=True, nullable=False)      
   filial_code = Column(String(500))                                   
   external_id = Column(String(500))                                   
@@ -61,7 +61,7 @@ class SmartupOrders(Base):
 class SmartupOrderProducts(Base):
   __tablename__ = 'smartup_order_products'
 
-  company_code = Column(String(100), primary_key=True, nullable=False)
+  pipe_id = Column(BigInteger, primary_key=True, nullable=False)
   product_unit_id = Column(BigInteger, primary_key=True, nullable=False)
   deal_id = Column(BigInteger, nullable=False)                          
   external_id = Column(String(500))                                     
@@ -89,13 +89,13 @@ class SmartupOrderProducts(Base):
   # Foreign Key to SmartupOrders
   order = relationship('SmartupOrders', back_populates='products')
   __table_args__ = (
-      ForeignKeyConstraint(['company_code', 'deal_id'], ['smartup_orders.company_code', 'smartup_orders.deal_id'], ondelete='CASCADE'),
+      ForeignKeyConstraint(['pipe_id', 'deal_id'], ['smartup_orders.pipe_id', 'smartup_orders.deal_id'], ondelete='CASCADE'),
   )
 
 class SmartupOrderProductAggregates(Base):
   __tablename__ = 'smartup_order_product_aggregates'
   
-  company_code = Column(String(100), primary_key=True, nullable=False)
+  pipe_id = Column(BigInteger, primary_key=True, nullable=False)
   sales_manager_id = Column(BigInteger, primary_key=True, nullable=False)
   filial_code = Column(String(500), primary_key=True, nullable=False)
   room_id = Column(BigInteger, primary_key=True, nullable=False)

@@ -1,2 +1,2 @@
 from .core import SmartupOrders, SmartupOrderProducts
-from .settings import SmartupPipeSettings
+from .settings import SmartupPipes, SmartupFilialCredentials

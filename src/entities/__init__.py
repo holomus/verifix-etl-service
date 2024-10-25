@@ -1,4 +1,4 @@
 from .order import OrderEntity
 from .order_product import OrderProductEntity
-from .smartup_credentials import SmartupCredentials, NewSmartupCredentials
+from .smartup_credentials import SmartupCredentials, NewSmartupCredentials, SmartupFilialCredentials
 from .smartup_order_filters import SmartupOrderFilters, SmartupOrderFilialFilters

@@ -11,14 +11,14 @@ class OrderDAO:
   def __init__(self, session: AsyncSession):
     self.session = session
 
-  async def aggregate_order_products(self, company_code: str, product_unit_ids: list[int]):
+  async def aggregate_order_products(self, pipe_id: int, product_unit_ids: list[int]):
     upsert_stmt = insert(SmartupOrderProductAggregates)
     upsert_stmt = upsert_stmt.on_conflict_do_update(constraint='smartup_order_product_aggregates_pk', set_={
       name: upsert_stmt.excluded[name] for name in SmartupOrderProductAggregates.nonprimary_columns()
     })
 
     select_stmt = select(
-      SmartupOrders.company_code,
+      SmartupOrders.pipe_id,
       SmartupOrders.sales_manager_id,
       SmartupOrders.filial_code,
       SmartupOrders.room_id,
@@ -31,7 +31,7 @@ class OrderDAO:
       func.sum(SmartupOrderProducts.sold_quant), # TODO: multiply by product weight
     ).where(
       and_(
-        SmartupOrderProducts.company_code == company_code,
+        SmartupOrderProducts.pipe_id == pipe_id,
         SmartupOrderProducts.product_unit_id.in_(product_unit_ids),
         SmartupOrders.status == self.SMARTUP_ORDER_STATUS_ARCHIVED,
         SmartupOrders.filial_code.is_not(None),
@@ -39,11 +39,11 @@ class OrderDAO:
       )
     ).join(SmartupOrders, 
       and_(
-        SmartupOrders.company_code == company_code,
+        SmartupOrders.pipe_id == pipe_id,
         SmartupOrders.deal_id == SmartupOrderProducts.deal_id
       )
     ).group_by(
-      SmartupOrders.company_code,
+      SmartupOrders.pipe_id,
       SmartupOrders.sales_manager_id,
       SmartupOrders.filial_code,
       SmartupOrders.room_id,
@@ -53,7 +53,7 @@ class OrderDAO:
     )
 
     upsert_stmt = upsert_stmt.from_select([
-      SmartupOrderProductAggregates.company_code,
+      SmartupOrderProductAggregates.pipe_id,
       SmartupOrderProductAggregates.sales_manager_id,
       SmartupOrderProductAggregates.filial_code,
       SmartupOrderProductAggregates.room_id,
@@ -68,12 +68,12 @@ class OrderDAO:
 
     await self.session.execute(upsert_stmt)
 
-  async def upsert_order(self, company_code: str, order: OrderEntity) -> None:
+  async def upsert_order(self, pipe_id: int, order: OrderEntity) -> None:
     order_data = order.model_dump(exclude={
       "products"
     })
 
-    upsert_order_stmt = insert(SmartupOrders).values(company_code=company_code).values(**order_data)
+    upsert_order_stmt = insert(SmartupOrders).values(pipe_id=pipe_id).values(**order_data)
     upsert_order_stmt = upsert_order_stmt.on_conflict_do_update(constraint='smartup_orders_pk', set_={ 
       name: upsert_order_stmt.excluded[name] for name in SmartupOrders.nonprimary_columns()
     })
@@ -84,7 +84,7 @@ class OrderDAO:
       product_data_list = [
         {
           **product.model_dump(),
-          'company_code': company_code,
+          'pipe_id': pipe_id,
           'deal_id': order.deal_id,
         } for product in order.products or []
       ]
@@ -101,16 +101,16 @@ class OrderDAO:
       ]
 
       delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
-        SmartupOrderProducts.company_code == company_code,
+        SmartupOrderProducts.pipe_id == pipe_id,
         SmartupOrderProducts.deal_id == order.deal_id,
         SmartupOrderProducts.product_unit_id.not_in(product_unit_ids)
       ))
 
       await self.session.execute(delete_old_products_stmt)
 
-      await self.aggregate_order_products(company_code, product_unit_ids)
+      await self.aggregate_order_products(pipe_id, product_unit_ids)
 
-  async def bulk_upsert_orders(self, company_code: str, orders: list[OrderEntity]) -> None:
+  async def bulk_upsert_orders(self, pipe_id: int, orders: list[OrderEntity]) -> None:
     if len(orders) == 0: 
       return
 
@@ -119,7 +119,7 @@ class OrderDAO:
         **order.model_dump(exclude={
           "products"
         }),
-        'company_code': company_code
+        'pipe_id': pipe_id
       }
       for order in orders
     ]
@@ -134,7 +134,7 @@ class OrderDAO:
     product_data_list = [
       {
         **product.model_dump(),
-        'company_code': company_code,
+        'pipe_id': pipe_id,
         'deal_id': order.deal_id,
       }
       for order in orders for product in (order.products or [])
@@ -160,23 +160,23 @@ class OrderDAO:
       ]
 
       delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
-        SmartupOrderProducts.company_code == company_code,
+        SmartupOrderProducts.pipe_id == pipe_id,
         SmartupOrderProducts.deal_id.in_(deal_ids),
         SmartupOrderProducts.product_unit_id.not_in(product_unit_ids)
       ))
 
       await self.session.execute(delete_old_products_stmt)
 
-      await self.aggregate_order_products(company_code, product_unit_ids)
+      await self.aggregate_order_products(pipe_id, product_unit_ids)
 
-  async def get_order_by_id(self, company_code: str, deal_id: int) -> OrderEntity:
+  async def get_order_by_id(self, pipe_id: int, deal_id: int) -> OrderEntity:
     order = await self.session.execute(
-      select(SmartupOrders).where(and_(SmartupOrders.company_code == company_code, SmartupOrders.deal_id == deal_id))
+      select(SmartupOrders).where(and_(SmartupOrders.pipe_id == pipe_id, SmartupOrders.deal_id == deal_id))
     )
     order = order.first()
     return OrderEntity.model_validate(order)
 
-  async def delete_order(self, company_code: str, deal_id: int) -> None:
+  async def delete_order(self, pipe_id: int, deal_id: int) -> None:
     await self.session.execute(
-      delete(SmartupOrders).where(and_(SmartupOrders.company_code == company_code, SmartupOrders.deal_id == deal_id))
+      delete(SmartupOrders).where(and_(SmartupOrders.pipe_id == pipe_id, SmartupOrders.deal_id == deal_id))
     )
