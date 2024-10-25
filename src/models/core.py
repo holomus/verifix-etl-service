@@ -102,7 +102,7 @@ class SmartupOrderProductAggregates(Base):
   person_id = Column(BigInteger, primary_key=True, nullable=False)
   product_code = Column(String(500), primary_key=True, nullable=False)
   delivery_date = Column(Date, primary_key=True, nullable=False)
-  deal_id = Column(BigInteger, nullable=False)
+  deal_count = Column(Numeric(20, 6), nullable=False)
   sold_amount = Column(Numeric(20, 6),nullable=False)
   sold_quantity = Column(Numeric(20, 6), nullable=False)
   sold_weight = Column(Numeric(20, 6), nullable=False)

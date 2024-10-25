@@ -97,7 +97,7 @@ CREATE TABLE verifix.smartup_order_product_aggregates(
   person_id                 BIGINT        NOT NULL,
   product_code              VARCHAR(500)  NOT NULL,
   delivery_date             DATE          NOT NULL,
-  deal_id                   BIGINT        NOT NULL,
+  deal_count                NUMERIC(20,6) NOT NULL,
   sold_amount               NUMERIC(20,6) NOT NULL,
   sold_quantity             NUMERIC(20,6) NOT NULL,
   sold_weight               NUMERIC(20,6) NOT NULL,

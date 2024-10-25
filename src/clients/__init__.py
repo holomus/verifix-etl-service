@@ -1,1 +1,1 @@
-from .smartup_extraction_client import SmartupExtractionClient
+from .smartup_extraction_client import SmartupExtractionClient, SmartupAuth

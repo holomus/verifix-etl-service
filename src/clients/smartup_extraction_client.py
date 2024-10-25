@@ -1,12 +1,22 @@
 from async_client import httpx_client
+from httpx import Auth
 from entities import OrderEntity, SmartupCredentials, SmartupOrderFilters, SmartupOrderFilialFilters
+
+class SmartupAuth(Auth):
+  def __init__(self, host: str, token: str):
+    self._token = token
+    self.host = host
+
+  def auth_flow(self, request):
+    request.headers["Authorization"] = f"Bearer {self._token}"
+    yield request
 
 class SmartupExtractionClient:
   ACCESS_TOKEN_PATH = "{}/security/oauth/token"
   DEALS_EXPORT_PATH = "{}/b/trade/txs/tdeal/order$export"
-  
+
   @classmethod
-  async def _get_access_token(cls, credentials: SmartupCredentials) -> str:
+  async def get_access_token(cls, credentials: SmartupCredentials) -> str:
     response = await httpx_client.post(
       cls.ACCESS_TOKEN_PATH.format(credentials.host),
       json={
@@ -25,17 +35,11 @@ class SmartupExtractionClient:
     return response['access_token']
 
   @classmethod
-  async def extractDeals(cls, credentials: SmartupCredentials, filters: SmartupOrderFilters) -> list[OrderEntity]:
-    access_token = await cls._get_access_token(credentials)
-
-    filters.filial_codes = [
-      SmartupOrderFilialFilters(filial_code=filial_code) for filial_code in credentials.filial_codes
-    ]
-
+  async def extractDeals(cls, smartup_auth: SmartupAuth, filters: SmartupOrderFilters) -> list[OrderEntity]:
     response = await httpx_client.post(
-      cls.DEALS_EXPORT_PATH.format(credentials.host),
+      cls.DEALS_EXPORT_PATH.format(smartup_auth.host),
+      auth=smartup_auth,
       headers={
-        'Authorization': 'Bearer {}'.format(access_token),
         'project_code': 'trade',
       },
       json=filters.model_dump(exclude_none=True, exclude_unset=True)

@@ -1,6 +1,6 @@
 from sqlalchemy import select, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func, distinct
 from sqlalchemy.dialects.postgresql import insert
 from models.core import *
 from entities import *
@@ -25,6 +25,10 @@ class OrderDAO:
       SmartupOrders.person_id,
       SmartupOrderProducts.product_code,
       SmartupOrders.delivery_date,
+      func.count(distinct(SmartupOrders.deal_id)),
+      func.sum(SmartupOrderProducts.sold_amount),
+      func.sum(SmartupOrderProducts.sold_quant),
+      func.sum(SmartupOrderProducts.sold_quant), # TODO: multiply by product weight
     ).where(
       and_(
         SmartupOrderProducts.company_code == company_code,
@@ -48,7 +52,21 @@ class OrderDAO:
       SmartupOrders.delivery_date
     )
 
-    
+    upsert_stmt = upsert_stmt.from_select([
+      SmartupOrderProductAggregates.company_code,
+      SmartupOrderProductAggregates.sales_manager_id,
+      SmartupOrderProductAggregates.filial_code,
+      SmartupOrderProductAggregates.room_id,
+      SmartupOrderProductAggregates.person_id,
+      SmartupOrderProductAggregates.product_code,
+      SmartupOrderProductAggregates.delivery_date,
+      SmartupOrderProductAggregates.deal_count,
+      SmartupOrderProductAggregates.sold_amount,
+      SmartupOrderProductAggregates.sold_quantity,
+      SmartupOrderProductAggregates.sold_weight
+    ], select=select_stmt)
+
+    await self.session.execute(upsert_stmt)
 
   async def upsert_order(self, company_code: str, order: OrderEntity) -> None:
     order_data = order.model_dump(exclude={
@@ -78,17 +96,19 @@ class OrderDAO:
 
       await self.session.execute(upsert_product_stmt, product_data_list)
 
-      product_ids = [
+      product_unit_ids = [
         product.product_unit_id for product in order.products or []
       ]
 
       delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
         SmartupOrderProducts.company_code == company_code,
         SmartupOrderProducts.deal_id == order.deal_id,
-        SmartupOrderProducts.product_unit_id.not_in(product_ids)
+        SmartupOrderProducts.product_unit_id.not_in(product_unit_ids)
       ))
 
       await self.session.execute(delete_old_products_stmt)
+
+      await self.aggregate_order_products(company_code, product_unit_ids)
 
   async def bulk_upsert_orders(self, company_code: str, orders: list[OrderEntity]) -> None:
     if len(orders) == 0: 
@@ -135,17 +155,19 @@ class OrderDAO:
         order.deal_id for order in orders
       ]
 
-      product_ids = [
+      product_unit_ids = [
         product.product_unit_id for order in orders for product in (order.products or [])
       ]
 
       delete_old_products_stmt = delete(SmartupOrderProducts).where(and_(
         SmartupOrderProducts.company_code == company_code,
         SmartupOrderProducts.deal_id.in_(deal_ids),
-        SmartupOrderProducts.product_unit_id.not_in(product_ids)
+        SmartupOrderProducts.product_unit_id.not_in(product_unit_ids)
       ))
 
       await self.session.execute(delete_old_products_stmt)
+
+      await self.aggregate_order_products(company_code, product_unit_ids)
 
   async def get_order_by_id(self, company_code: str, deal_id: int) -> OrderEntity:
     order = await self.session.execute(
