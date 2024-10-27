@@ -1,7 +1,15 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated
+
+# Pydantic model for SmartupProductTypes
+class SmartupProductTypeEntity(BaseModel):
+  model_config = ConfigDict(from_attributes=True)
+
+  group_code: Annotated[str | None, Field(alias='product_group_code')]
+  type_code: Annotated[str | None, Field(alias='product_type_code')]
 
 # Pydantic model for SmartupProducts
-class SmartupProduct(BaseModel):
+class SmartupProductEntity(BaseModel):
   model_config = ConfigDict(from_attributes=True)
   
   product_id: int
@@ -10,11 +18,4 @@ class SmartupProduct(BaseModel):
   weight_netto: float | None
   weight_brutto: float | None
   litr: float | None
-
-# Pydantic model for SmartupProductTypes
-class SmartupProductType(BaseModel):
-  model_config = ConfigDict(from_attributes=True)
-
-  product_group_code: str
-  product_id: int
-  product_type_code: str
+  type_binds: list[SmartupProductTypeEntity] | None = []

@@ -1,7 +1,15 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated
+
+# Pydantic model for SmartupLegalPersonTypes
+class SmartupLegalPersonTypeEntity(BaseModel):
+  model_config = ConfigDict(from_attributes=True)
+
+  group_code: Annotated[str | None, Field(alias='person_group_code')]
+  type_code: Annotated[str | None, Field(alias='person_type_code')]
 
 # Pydantic model for SmartupLegalPersons
-class SmartupLegalPerson(BaseModel):
+class SmartupLegalPersonEntity(BaseModel):
   model_config = ConfigDict(from_attributes=True)
   
   person_id: int
@@ -9,11 +17,5 @@ class SmartupLegalPerson(BaseModel):
   short_name: str
   code: str | None
   region_code: str | None
+  type_binds: list[SmartupLegalPersonTypeEntity] | None = []
 
-# Pydantic model for SmartupLegalPersonTypes
-class SmartupLegalPersonType(BaseModel):
-  model_config = ConfigDict(from_attributes=True)
-
-  person_group_code: str
-  person_id: int
-  person_type_code: str

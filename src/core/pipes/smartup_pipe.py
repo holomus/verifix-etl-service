@@ -1,8 +1,8 @@
 
 from datetime import datetime, timedelta
-from entities import SmartupCredentials, SmartupOrderFilters
+from entities import SmartupCredentials, SmartupFilters
 from clients import SmartupExtractionClient, SmartupAuth
-from daos import OrderDAO, PipeSettingsDAO
+from daos import OrderDAO, PipeSettingsDAO, ProductDAO, ClientDAO
 from db import Session
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,12 +14,7 @@ class SmartupPipe:
     self._credentials = credentials
 
   # load pipe settings from smartup_pipe_settings and you can work with this
-  async def extract_data_between(self, auth: SmartupAuth, session: AsyncSession, begin_load_time: datetime, end_load_time: datetime):
-    if self._credentials.id is None:
-      raise ValueError('when extracting data from SmartUp credentials must have an id')
-
-    filters = SmartupOrderFilters(begin_modified_on=begin_load_time, end_modified_on=end_load_time)
-
+  async def extract_data_between(self, auth: SmartupAuth, session: AsyncSession, filters: SmartupFilters):
     orders = await SmartupExtractionClient.extractDeals(auth, filters)
 
     orderDao = OrderDAO(session)
@@ -51,13 +46,23 @@ class SmartupPipe:
       # Extract data for each time window of _pagination_timedelta
       next_end_time = min(start_load_time + self._pagination_timedelta, end_load_time)
       
+      filters = SmartupFilters(begin_modified_on=start_load_time, end_modified_on=next_end_time)
+
       async with Session.begin() as session:
         pipeDao = PipeSettingsDAO(session)
+        productDao = ProductDAO(session)
+        clientDao = ClientDAO(session)
 
         for token in filial_tokens:
           auth = SmartupAuth(self._credentials.host, token)
-          await self.extract_data_between(auth, session, start_load_time, next_end_time)
+          await self.extract_data_between(auth, session, filters)
         
+        products = await SmartupExtractionClient.extractProducts(auth, filters)
+        await productDao.bulk_upsert_products(pipe_id=self._credentials.id, products=products)
+        
+        clients = await SmartupExtractionClient.extractClients(auth, filters)
+        await clientDao.bulk_upsert_clients(pipe_id=self._credentials.id, clients=clients)
+
         await pipeDao.update_pipe_last_executed(self._credentials.id, next_end_time)
       
       start_load_time = next_end_time

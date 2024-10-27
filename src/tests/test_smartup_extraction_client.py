@@ -1,5 +1,5 @@
 import unittest
-from entities import SmartupCredentials, SmartupOrderFilters
+from entities import SmartupCredentials, SmartupFilters
 from clients import SmartupExtractionClient
 
 credentials = SmartupCredentials(
@@ -8,7 +8,7 @@ credentials = SmartupCredentials(
   client_secret="F2D756E462791D840254113DB18388745B66F300DFDCB3F0F21D5E3844262CC9D28972B468F157A1B5EB7C48CF625C019D00C4006FAF41F35D77F4B7DF515A73",
 )
 
-filters = SmartupOrderFilters()
+filters = SmartupFilters()
 
 smartupClient = SmartupExtractionClient()
 

@@ -1,14 +1,11 @@
 from datetime import date, datetime
 from pydantic import BaseModel, field_serializer
 
-class SmartupOrderFilialFilters(BaseModel):
+class SmartupFilialFilters(BaseModel):
   filial_code: str
 
-class SmartupOrderFilters(BaseModel):
-  filial_codes: list[SmartupOrderFilialFilters] | None = None
-  begin_deal_date: date | None = None
-  end_deal_date: date | None = None
-  delivery_date: date | None = None
+class SmartupFilters(BaseModel):
+  filial_codes: list[SmartupFilialFilters] | None = None
   begin_created_on: datetime | None = None
   end_created_on: datetime | None = None
   begin_modified_on: datetime | None = None
