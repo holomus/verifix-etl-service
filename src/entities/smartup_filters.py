@@ -13,8 +13,4 @@ class SmartupFilters(BaseModel):
 
   @field_serializer('begin_created_on', 'end_created_on', 'begin_modified_on', 'end_modified_on')
   def serialize_datetime(self, dt: datetime):
-    return dt.strftime("%d.%m.%Y %H:%M:%S")
-  
-  @field_serializer('begin_deal_date', 'end_deal_date', 'delivery_date')
-  def serialize_date(self, dt: date):
     return dt.strftime("%d.%m.%Y")

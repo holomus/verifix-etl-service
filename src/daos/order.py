@@ -2,7 +2,7 @@ from sqlalchemy import select, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func, distinct
 from sqlalchemy.dialects.postgresql import insert
-from models.core import *
+from models import SmartupOrders, SmartupOrderProducts, SmartupOrderProductAggregates, SmartupProducts
 from entities import *
 
 class OrderDAO:
@@ -17,6 +17,17 @@ class OrderDAO:
       name: upsert_stmt.excluded[name] for name in SmartupOrderProductAggregates.nonprimary_columns()
     })
 
+    subquery_stmt = (
+      select(
+        SmartupProducts.weight_netto
+      ).where(
+        and_(
+          SmartupOrderProducts.pipe_id == SmartupProducts.pipe_id,
+          SmartupOrderProducts.product_code == SmartupProducts.code
+        )
+       ).scalar_subquery()
+    )
+
     select_stmt = select(
       SmartupOrders.pipe_id,
       SmartupOrders.sales_manager_id,
@@ -28,7 +39,7 @@ class OrderDAO:
       func.count(distinct(SmartupOrders.deal_id)),
       func.sum(SmartupOrderProducts.sold_amount),
       func.sum(SmartupOrderProducts.sold_quant),
-      func.sum(SmartupOrderProducts.sold_quant), # TODO: multiply by product weight
+      func.coalesce(func.sum(SmartupOrderProducts.sold_quant * subquery_stmt), 0),
     ).where(
       and_(
         SmartupOrderProducts.pipe_id == pipe_id,

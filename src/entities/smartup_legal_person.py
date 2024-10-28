@@ -5,8 +5,8 @@ from typing import Annotated
 class SmartupLegalPersonTypeEntity(BaseModel):
   model_config = ConfigDict(from_attributes=True)
 
-  group_code: Annotated[str | None, Field(alias='person_group_code')]
-  type_code: Annotated[str | None, Field(alias='person_type_code')]
+  group_code: Annotated[str | None, Field(serialization_alias='person_group_code')]
+  type_code: Annotated[str | None, Field(serialization_alias='person_type_code')]
 
 # Pydantic model for SmartupLegalPersons
 class SmartupLegalPersonEntity(BaseModel):
