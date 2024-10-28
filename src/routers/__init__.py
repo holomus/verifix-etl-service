@@ -1,1 +1,2 @@
 from .smartup_pipe_api import router as smartup_pipe_router
+from .smartup_aggregate_api import router as smartup_aggregates_router

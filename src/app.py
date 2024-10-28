@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
-from routers import smartup_pipe_router
+from routers import smartup_pipe_router, smartup_aggregates_router
 from contextlib import asynccontextmanager
 from jobs import start_extraction_on_all_pipes, scheduler
 from async_client import httpx_client
@@ -21,6 +21,7 @@ async def lifespan(app:FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(smartup_pipe_router)
+app.include_router(smartup_aggregates_router)
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
