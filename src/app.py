@@ -1,12 +1,14 @@
 import uvicorn
-from fastapi import FastAPI, Request
+import secrets
+from typing import Annotated
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 from routers import smartup_pipe_router, smartup_aggregates_router
 from contextlib import asynccontextmanager
 from jobs import start_extraction_on_all_pipes, scheduler
 from async_client import httpx_client
-
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
@@ -18,7 +20,29 @@ async def lifespan(app:FastAPI):
     scheduler.shutdown()
     await httpx_client.aclose()
 
-app = FastAPI(lifespan=lifespan)
+security = HTTPBasic()
+
+def verify_user(
+  credentials: Annotated[HTTPBasicCredentials, Depends(security)],
+):
+  current_username_bytes = credentials.username.encode("utf8")
+  correct_username_bytes = b"admin"
+  is_correct_username = secrets.compare_digest(
+    current_username_bytes, correct_username_bytes
+  )
+  current_password_bytes = credentials.password.encode("utf8")
+  correct_password_bytes = b"admin"
+  is_correct_password = secrets.compare_digest(
+    current_password_bytes, correct_password_bytes
+  )
+  if not (is_correct_username and is_correct_password):
+    raise HTTPException(
+      status_code=status.HTTP_401_UNAUTHORIZED,
+      detail="Incorrect username or password",
+      headers={"WWW-Authenticate": "Basic"},
+    )
+
+app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_user)])
 
 app.include_router(smartup_pipe_router)
 app.include_router(smartup_aggregates_router)
