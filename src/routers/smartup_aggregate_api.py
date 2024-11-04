@@ -9,7 +9,7 @@ router = APIRouter(
 )
 
 @router.post('/', response_model=list[SmartupAggregateResult])
-async def get_pipe_settings(filters: SmartupAggregateFilter) -> list[SmartupAggregateResult]:
+async def load_smartup_order_aggregate_results(filters: SmartupAggregateFilter) -> list[SmartupAggregateResult]:
   async with Session.begin() as session:
     dao = OrderDAO(session)
     return await dao.get_order_aggregates(filters)

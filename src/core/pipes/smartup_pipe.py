@@ -1,5 +1,5 @@
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from entities import SmartupCredentials, SmartupFilters
 from clients import SmartupExtractionClient, SmartupAuth
 from daos import OrderDAO, PipeSettingsDAO, ProductDAO, ClientDAO
@@ -22,7 +22,7 @@ class SmartupPipe:
     await orderDao.bulk_upsert_orders(pipe_id=self._credentials.id, orders=orders)
 
   async def _initial_data_extraction(self, head_token: str):
-    end_load_time = datetime.utcnow()
+    end_load_time = datetime.now()
 
     filters = SmartupFilters(end_modified_on=end_load_time)
     auth = SmartupAuth(self._credentials.host, head_token)
@@ -55,9 +55,9 @@ class SmartupPipe:
       head_token = filial_tokens[0]
 
     is_initial_load = start_load_time or self._credentials.last_execution_time is None
-    start_load_time = start_load_time or self._credentials.last_execution_time or datetime.utcnow() - 2 * self._pagination_timedelta
+    start_load_time = start_load_time or self._credentials.last_execution_time or datetime.now() - 2 * self._pagination_timedelta
 
-    end_load_time = datetime.utcnow()
+    end_load_time = datetime.now()
 
     if is_initial_load:
       await self._initial_data_extraction(head_token)
