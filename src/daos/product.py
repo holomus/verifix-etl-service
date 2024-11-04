@@ -35,8 +35,7 @@ class ProductDAO:
         'pipe_id': pipe_id,
         'product_id': product.product_id,
       }
-      for product in products for type_bind in (product.type_binds or []) 
-      if type_bind.group_code is not None and type_bind.type_code is not None
+      for product in products for type_bind in (product.type_binds or [])
     ]
 
     if len(type_bind_data_list) > 0:
@@ -51,15 +50,14 @@ class ProductDAO:
         product.product_id for product in products
       ]
 
-      product_group_codes = [
-        type_bind.group_code for product in products for type_bind in (product.type_binds or [])
-        if type_bind.group_code is not None
+      product_group_ids = [
+        type_bind.group_id for product in products for type_bind in (product.type_binds or [])
       ]
 
       delete_old_products_stmt = delete(SmartupProductTypes).where(and_(
         SmartupProductTypes.pipe_id == pipe_id,
         SmartupProductTypes.product_id.in_(product_ids),
-        SmartupProductTypes.product_group_code.not_in(product_group_codes)
+        SmartupProductTypes.product_group_id.not_in(product_group_ids)
       ))
 
       await self.session.execute(delete_old_products_stmt)

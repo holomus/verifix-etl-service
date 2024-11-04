@@ -23,24 +23,24 @@ CREATE TABLE verifix.smartup_legal_persons(
   name                      VARCHAR(500)  NOT NULL,
   short_name                VARCHAR(500)  NOT NULL,
   code                      VARCHAR(100),
-  region_code               VARCHAR(500),
+  region_id                 BIGINT,
   CONSTRAINT smartup_legal_persons_pk PRIMARY KEY (pipe_id, person_id)
 );
 
-CREATE INDEX smartup_legal_persons_i1 on verifix.smartup_legal_persons(pipe_id, region_code);
+CREATE INDEX smartup_legal_persons_i1 on verifix.smartup_legal_persons(pipe_id, region_id);
 
 CREATE TABLE verifix.smartup_legal_person_types(
   pipe_id                   BIGINT        NOT NULL,
-  person_group_code         VARCHAR(500)  NOT NULL,
+  person_group_id           BIGINT        NOT NULL,
   person_id                 BIGINT        NOT NULL,
-  person_type_code          VARCHAR(500)  NOT NULL,
-  CONSTRAINT smartup_legal_person_types_pk PRIMARY KEY (pipe_id, person_group_code, person_id),
+  person_type_id            BIGINT        NOT NULL,
+  CONSTRAINT smartup_legal_person_types_pk PRIMARY KEY (pipe_id, person_group_id, person_id),
   CONSTRAINT smartup_legal_person_types_f1 FOREIGN KEY (pipe_id, person_id) REFERENCES verifix.smartup_legal_persons(pipe_id, person_id) ON DELETE CASCADE
 );
 
-CREATE INDEX smartup_legal_person_types_i1 on verifix.smartup_legal_person_types(pipe_id, person_type_code, person_group_code);
-CREATE INDEX smartup_legal_person_types_i2 on verifix.smartup_legal_person_types(pipe_id, person_type_code);
-CREATE INDEX smartup_legal_person_types_i3 on verifix.smartup_legal_person_types(pipe_id, person_group_code);
+CREATE INDEX smartup_legal_person_types_i1 on verifix.smartup_legal_person_types(pipe_id, person_type_id, person_group_id);
+CREATE INDEX smartup_legal_person_types_i2 on verifix.smartup_legal_person_types(pipe_id, person_type_id);
+CREATE INDEX smartup_legal_person_types_i3 on verifix.smartup_legal_person_types(pipe_id, person_group_id);
 
 CREATE TABLE verifix.smartup_products(
   pipe_id                   BIGINT         NOT NULL,
@@ -55,21 +55,21 @@ CREATE TABLE verifix.smartup_products(
 
 CREATE TABLE verifix.smartup_product_types(
   pipe_id                   BIGINT         NOT NULL,
-  product_group_code        VARCHAR(500)   NOT NULL,
+  product_group_id          BIGINT         NOT NULL,
   product_id                BIGINT         NOT NULL,
-  product_type_code         VARCHAR(500)   NOT NULL,
-  CONSTRAINT smartup_product_types_pk PRIMARY KEY (pipe_id, product_group_code, product_id),
+  product_type_id           BIGINT         NOT NULL,
+  CONSTRAINT smartup_product_types_pk PRIMARY KEY (pipe_id, product_group_id, product_id),
   CONSTRAINT smartup_product_types_f1 FOREIGN KEY (pipe_id, product_id) REFERENCES verifix.smartup_products(pipe_id, product_id) ON DELETE CASCADE
 );
 
-CREATE INDEX smartup_product_types_i1 on verifix.smartup_product_types(pipe_id, product_type_code, product_group_code);
-CREATE INDEX smartup_product_types_i2 on verifix.smartup_product_types(pipe_id, product_type_code);
-CREATE INDEX smartup_product_types_i3 on verifix.smartup_product_types(pipe_id, product_group_code);
+CREATE INDEX smartup_product_types_i1 on verifix.smartup_product_types(pipe_id, product_type_id, product_group_id);
+CREATE INDEX smartup_product_types_i2 on verifix.smartup_product_types(pipe_id, product_type_id);
+CREATE INDEX smartup_product_types_i3 on verifix.smartup_product_types(pipe_id, product_group_id);
 
 CREATE TABLE verifix.smartup_orders(
   pipe_id                   BIGINT        NOT NULL,
   deal_id                   BIGINT        NOT NULL,
-  filial_code               VARCHAR(500),
+  filial_id                 BIGINT        NOT NULL,
   external_id               VARCHAR(500),
   subfilial_code            VARCHAR(500),
   deal_time                 TIMESTAMP     NOT NULL,
@@ -120,7 +120,7 @@ CREATE TABLE verifix.smartup_order_products(
   product_unit_id           BIGINT        NOT NULL,
   deal_id                   BIGINT        NOT NULL,
   external_id               VARCHAR(500),
-  product_code              VARCHAR(500),
+  product_id                BIGINT        NOT NULL,
   product_local_code        VARCHAR(500),
   product_name              VARCHAR(500)  NOT NULL,
   serial_number             VARCHAR(500),
@@ -149,19 +149,19 @@ CREATE INDEX smartup_order_products_i1 ON verifix.smartup_order_products(pipe_id
 CREATE TABLE verifix.smartup_order_product_aggregates(
   pipe_id                   BIGINT        NOT NULL,
   sales_manager_id          BIGINT        NOT NULL,
-  filial_code               VARCHAR(500)  NOT NULL,
+  filial_id                 BIGINT        NOT NULL,
   room_id                   BIGINT        NOT NULL,
   person_id                 BIGINT        NOT NULL,
-  product_code              VARCHAR(500)  NOT NULL,
+  product_id                BIGINT        NOT NULL,
   delivery_date             DATE          NOT NULL,
   deal_count                NUMERIC(20,6) NOT NULL,
   sold_amount               NUMERIC(20,6) NOT NULL,
   sold_quantity             NUMERIC(20,6) NOT NULL,
   sold_weight               NUMERIC(20,6) NOT NULL,
-  CONSTRAINT smartup_order_product_aggregates_pk PRIMARY KEY (pipe_id, sales_manager_id, filial_code, room_id, person_id, product_code, delivery_date)
+  CONSTRAINT smartup_order_product_aggregates_pk PRIMARY KEY (pipe_id, sales_manager_id, filial_id, room_id, person_id, product_id, delivery_date)
 );
 
-CREATE INDEX smartup_order_product_aggregates_i1 on verifix.smartup_order_product_aggregates(pipe_id, sales_manager_id, filial_code, delivery_date) INCLUDE (deal_count, sold_amount, sold_quantity, sold_weight);
-CREATE INDEX smartup_order_product_aggregates_i2 on verifix.smartup_order_product_aggregates(pipe_id, sales_manager_id, filial_code, person_id, delivery_date) INCLUDE (deal_count, sold_amount, sold_quantity, sold_weight);
-CREATE INDEX smartup_order_product_aggregates_i3 on verifix.smartup_order_product_aggregates(pipe_id, sales_manager_id, filial_code, product_code, delivery_date) INCLUDE (deal_count, sold_amount, sold_quantity, sold_weight);
-CREATE INDEX smartup_order_product_aggregates_i4 on verifix.smartup_order_product_aggregates(pipe_id, sales_manager_id, filial_code, room_id, delivery_date) INCLUDE (deal_count, sold_amount, sold_quantity, sold_weight);
+CREATE INDEX smartup_order_product_aggregates_i1 on verifix.smartup_order_product_aggregates(pipe_id, sales_manager_id, filial_id, delivery_date) INCLUDE (deal_count, sold_amount, sold_quantity, sold_weight);
+CREATE INDEX smartup_order_product_aggregates_i2 on verifix.smartup_order_product_aggregates(pipe_id, sales_manager_id, filial_id, person_id, delivery_date) INCLUDE (deal_count, sold_amount, sold_quantity, sold_weight);
+CREATE INDEX smartup_order_product_aggregates_i3 on verifix.smartup_order_product_aggregates(pipe_id, sales_manager_id, filial_id, product_id, delivery_date) INCLUDE (deal_count, sold_amount, sold_quantity, sold_weight);
+CREATE INDEX smartup_order_product_aggregates_i4 on verifix.smartup_order_product_aggregates(pipe_id, sales_manager_id, filial_id, room_id, delivery_date) INCLUDE (deal_count, sold_amount, sold_quantity, sold_weight);

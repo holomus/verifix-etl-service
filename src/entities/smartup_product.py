@@ -5,8 +5,8 @@ from typing import Annotated
 class SmartupProductTypeEntity(BaseModel):
   model_config = ConfigDict(from_attributes=True)
 
-  group_code: Annotated[str | None, Field(serialization_alias='product_group_code')]
-  type_code: Annotated[str | None, Field(serialization_alias='product_type_code')]
+  group_id: Annotated[int, Field(serialization_alias='product_group_id')]
+  type_id: Annotated[int, Field(serialization_alias='product_type_id')]
 
 # Pydantic model for SmartupProducts
 class SmartupProductEntity(BaseModel):

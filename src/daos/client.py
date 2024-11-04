@@ -35,8 +35,7 @@ class ClientDAO:
         'pipe_id': pipe_id,
         'person_id': client.person_id,
       }
-      for client in clients for type_bind in (client.type_binds or []) 
-      if type_bind.group_code is not None and type_bind.type_code is not None
+      for client in clients for type_bind in (client.type_binds or [])
     ]
 
     if len(type_bind_data_list) > 0:
@@ -51,15 +50,14 @@ class ClientDAO:
         client.person_id for client in clients
       ]
 
-      person_group_codes = [
-        type_bind.group_code for client in clients for type_bind in (client.type_binds or [])
-        if type_bind.group_code is not None
+      person_group_ids = [
+        type_bind.group_id for client in clients for type_bind in (client.type_binds or [])
       ]
 
       delete_old_products_stmt = delete(SmartupLegalPersonTypes).where(and_(
         SmartupLegalPersonTypes.pipe_id == pipe_id,
         SmartupLegalPersonTypes.person_id.in_(person_ids),
-        SmartupLegalPersonTypes.person_group_code.not_in(person_group_codes)
+        SmartupLegalPersonTypes.person_group_id.not_in(person_group_ids)
       ))
 
       await self.session.execute(delete_old_products_stmt)

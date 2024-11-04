@@ -32,7 +32,7 @@ class OrderDAO:
       ).where(
         and_(
           SmartupOrderProducts.pipe_id == SmartupProducts.pipe_id,
-          SmartupOrderProducts.product_code == SmartupProducts.code
+          SmartupOrderProducts.product_id == SmartupProducts.product_id
         )
        ).scalar_subquery()
     )
@@ -40,10 +40,10 @@ class OrderDAO:
     select_stmt = select(
       SmartupOrders.pipe_id,
       SmartupOrders.sales_manager_id,
-      SmartupOrders.filial_code,
+      SmartupOrders.filial_id,
       SmartupOrders.room_id,
       SmartupOrders.person_id,
-      SmartupOrderProducts.product_code,
+      SmartupOrderProducts.product_id,
       SmartupOrders.delivery_date,
       func.count(distinct(case((SmartupOrderProducts.sold_amount > 0, SmartupOrders.deal_id), else_=None))),
       func.sum(SmartupOrderProducts.sold_amount),
@@ -53,9 +53,7 @@ class OrderDAO:
       and_(
         SmartupOrderProducts.pipe_id == pipe_id,
         SmartupOrderProducts.product_unit_id.in_(product_unit_ids),
-        SmartupOrders.status == self.SMARTUP_ORDER_STATUS_ARCHIVED,
-        SmartupOrders.filial_code.is_not(None),
-        SmartupOrderProducts.product_code.is_not(None)
+        SmartupOrders.status == self.SMARTUP_ORDER_STATUS_ARCHIVED
       )
     ).join(SmartupOrders, 
       and_(
@@ -65,20 +63,20 @@ class OrderDAO:
     ).group_by(
       SmartupOrders.pipe_id,
       SmartupOrders.sales_manager_id,
-      SmartupOrders.filial_code,
+      SmartupOrders.filial_id,
       SmartupOrders.room_id,
       SmartupOrders.person_id,
-      SmartupOrderProducts.product_code,
+      SmartupOrderProducts.product_id,
       SmartupOrders.delivery_date
     )
 
     upsert_stmt = upsert_stmt.from_select([
       SmartupOrderProductAggregates.pipe_id,
       SmartupOrderProductAggregates.sales_manager_id,
-      SmartupOrderProductAggregates.filial_code,
+      SmartupOrderProductAggregates.filial_id,
       SmartupOrderProductAggregates.room_id,
       SmartupOrderProductAggregates.person_id,
-      SmartupOrderProductAggregates.product_code,
+      SmartupOrderProductAggregates.product_id,
       SmartupOrderProductAggregates.delivery_date,
       SmartupOrderProductAggregates.deal_count,
       SmartupOrderProductAggregates.sold_amount,
@@ -231,8 +229,8 @@ class OrderDAO:
       )
     )
 
-    if len(filter.filial_codes) > 0:
-      select_stmt = select_stmt.where(SmartupOrderProductAggregates.filial_code.in_(filter.filial_codes))
+    if len(filter.filial_ids) > 0:
+      select_stmt = select_stmt.where(SmartupOrderProductAggregates.filial_id.in_(filter.filial_ids))
 
     if len(filter.room_ids) > 0:
       select_stmt = select_stmt.where(SmartupOrderProductAggregates.room_id.in_(filter.room_ids))
@@ -243,33 +241,33 @@ class OrderDAO:
     if len(filter.client_ids) > 0:
       select_stmt = select_stmt.where(SmartupOrderProductAggregates.person_id.in_(filter.client_ids))
 
-    if len(filter.product_codes) > 0:
-      select_stmt = select_stmt.where(SmartupOrderProductAggregates.product_code.in_(filter.product_codes))
+    if len(filter.product_ids) > 0:
+      select_stmt = select_stmt.where(SmartupOrderProductAggregates.product_id.in_(filter.product_ids))
 
-    if len(filter.product_type_codes) > 0 and filter.product_group_code is not None:
+    if len(filter.product_type_ids) > 0 and filter.product_group_id is not None:
       product_filter_smtm = (
         select(
           SmartupProducts.code
         ).where(
           and_(
             SmartupProductTypes.pipe_id == pipe_select_stmt,
-            SmartupProductTypes.product_group_code == filter.product_group_code,
-            SmartupProductTypes.product_type_code.in_(filter.product_type_codes)
+            SmartupProductTypes.product_group_id == filter.product_group_id,
+            SmartupProductTypes.product_type_id.in_(filter.product_type_ids)
           )
         )
       )
 
-      select_stmt = select_stmt.where(SmartupOrderProductAggregates.product_code.in_(product_filter_smtm))
+      select_stmt = select_stmt.where(SmartupOrderProductAggregates.product_id.in_(product_filter_smtm))
 
-    if len(filter.client_type_codes) > 0 and filter.client_group_code is not None:
+    if len(filter.client_type_ids) > 0 and filter.client_group_id is not None:
       client_filter_smtm = (
         select(
           SmartupLegalPersons.code
         ).where(
           and_(
             SmartupLegalPersonTypes.pipe_id == pipe_select_stmt,
-            SmartupLegalPersonTypes.person_group_code == filter.client_group_code,
-            SmartupLegalPersonTypes.person_type_code.in_(filter.client_type_codes)
+            SmartupLegalPersonTypes.person_group_id == filter.client_group_id,
+            SmartupLegalPersonTypes.person_type_id.in_(filter.client_type_ids)
           )
         )
       )

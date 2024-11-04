@@ -6,7 +6,7 @@ class OrderEntity(BaseModel):
   model_config = ConfigDict(from_attributes=True)
 
   deal_id: int
-  filial_code: str | None
+  filial_id: int
   external_id: str | None
   subfilial_code: str | None
   deal_time: datetime

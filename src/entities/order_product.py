@@ -3,8 +3,8 @@ from datetime import date, datetime
 
 class OrderProductEntity(BaseModel):
   product_unit_id: int
+  product_id: int
   external_id: str | None
-  product_code: str | None
   product_local_code: str | None
   product_name: str
   serial_number: str | None
