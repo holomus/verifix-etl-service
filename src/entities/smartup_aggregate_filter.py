@@ -17,20 +17,6 @@ class SmartupAggregateFilter(BaseModel):
   product_group_id: int | None = None
   client_type_ids: list[int] = []
   client_group_id: int | None = None
-
-  @field_validator('product_group_id', mode='before')
-  @classmethod
-  def validate_product_group_code(cls, value, info: ValidationInfo):
-    if len(info.data['product_type_ids']) == 0:
-      return None
-    return value
-
-  @field_validator('client_group_id', mode='before')
-  @classmethod
-  def validate_client_group_code(cls, value, info: ValidationInfo):
-    if len(info.data['client_type_ids']) == 0:
-      return None
-    return value
   
   @field_validator('period_begin', 'period_end', mode='before')
   @classmethod

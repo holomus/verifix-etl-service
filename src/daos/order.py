@@ -247,7 +247,7 @@ class OrderDAO:
     if len(filter.product_type_ids) > 0 and filter.product_group_id is not None:
       product_filter_smtm = (
         select(
-          SmartupProducts.code
+          SmartupProductTypes.product_id
         ).where(
           and_(
             SmartupProductTypes.pipe_id == pipe_select_stmt,
@@ -262,7 +262,7 @@ class OrderDAO:
     if len(filter.client_type_ids) > 0 and filter.client_group_id is not None:
       client_filter_smtm = (
         select(
-          SmartupLegalPersons.code
+          SmartupLegalPersonTypes.person_id
         ).where(
           and_(
             SmartupLegalPersonTypes.pipe_id == pipe_select_stmt,
