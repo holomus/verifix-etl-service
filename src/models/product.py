@@ -8,8 +8,7 @@ class SmartupProducts(Base):
   
   pipe_id = Column(BigInteger, primary_key=True, nullable=False)
   product_id = Column(BigInteger, primary_key=True, nullable=False)
-  code = Column(String(500))
-  name = Column(String(500), nullable=False)
+  name = Column(String(1000), nullable=False)
   weight_netto = Column(Numeric(10, 4))
   weight_brutto = Column(Numeric(10, 4))
   litr = Column(Numeric(10, 4))

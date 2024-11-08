@@ -1,7 +1,7 @@
 from .order import OrderEntity
 from .order_product import OrderProductEntity
-from .smartup_credentials import SmartupCredentials, NewSmartupCredentials, SmartupFilialCredentials
-from .smartup_filters import SmartupFilters, SmartupFilialFilters
+from .smartup_credentials import SmartupCredentials, NewSmartupCredentials, UpdateSmartupCredentials
+from .smartup_filters import SmartupDealFilters
 from .smartup_legal_person import SmartupLegalPersonEntity, SmartupLegalPersonTypeEntity
 from .smartup_product import SmartupProductEntity, SmartupProductTypeEntity
 from .smartup_aggregate_filter import SmartupAggregateFilter

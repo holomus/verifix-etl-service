@@ -2,9 +2,10 @@ from fastapi import APIRouter, HTTPException
 from starlette.status import HTTP_204_NO_CONTENT,  HTTP_404_NOT_FOUND
 from db import Session
 from daos import PipeSettingsDAO
-from entities import SmartupCredentials, NewSmartupCredentials
+from entities import SmartupCredentials, NewSmartupCredentials, SmartupDealFilters, UpdateSmartupCredentials
 from pydantic import BaseModel
-from jobs import start_extraction_on
+from jobs import start_extraction_between
+from datetime import datetime
 
 class SmartupCreatePipeResponse(BaseModel):
   id: int
@@ -36,17 +37,25 @@ async def delete_pipe(pipe_id: int) -> None:
     await dao.delete_pipe_settings_by_id(pipe_id)  
 
 @router.put('/', status_code=HTTP_204_NO_CONTENT)
-async def update_pipe(settings: SmartupCredentials) -> None:
+async def update_pipe(update_settings: UpdateSmartupCredentials) -> None:
+  settings = SmartupCredentials(
+    id=update_settings.id,
+    company_code=update_settings.company_code,
+    host=update_settings.host,
+    client_id=update_settings.client_id,
+    client_secret=update_settings.client_secret,
+    cursors={}
+  )
+
   async with Session.begin() as session:
     dao = PipeSettingsDAO(session)
     await dao.update_pipe_settings(settings)
-    credentials= await dao.get_pipe_settings_by_id(settings.id)
-  
-  if credentials is not None and settings.last_execution_time is not None:
-    start_extraction_on(credentials)
 
 @router.post('/', response_model=SmartupCreatePipeResponse)
-async def create_pipe(settings: NewSmartupCredentials) -> SmartupCreatePipeResponse:
+async def create_pipe(settings: NewSmartupCredentials, filters: SmartupDealFilters) -> SmartupCreatePipeResponse:
+  filters.begin_deal_month = filters.begin_deal_month or datetime.now()
+  filters.end_deal_month = filters.end_deal_month or datetime.now()
+
   async with Session.begin() as session:
     dao = PipeSettingsDAO(session)
     pipe_id = await dao.insert_pipe_settings(settings)
@@ -55,9 +64,21 @@ async def create_pipe(settings: NewSmartupCredentials) -> SmartupCreatePipeRespo
       id=pipe_id,
       company_code=settings.company_code,
       host=settings.host,
-      filials=settings.filials,
-      last_execution_time=settings.last_execution_time
+      client_id=settings.client_id,
+      client_secret=settings.client_secret,
+      cursors={}
     )
 
-  start_extraction_on(credentials)
-  return SmartupCreatePipeResponse(id=pipe_id)
+    start_extraction_between(credentials, filters, True, True)
+    return SmartupCreatePipeResponse(id=pipe_id)
+
+@router.post('/extract/{pipe_id}', status_code=HTTP_204_NO_CONTENT)
+async def extract_deals(pipe_id: int, filters: SmartupDealFilters, reload_clients: bool = False, reload_products: bool = False):
+  async with Session.begin() as session:
+    dao = PipeSettingsDAO(session)
+    settings = await dao.get_pipe_settings_by_id(pipe_id)
+
+    if settings is None:
+      return
+
+    start_extraction_between(settings, filters, reload_clients, reload_products)

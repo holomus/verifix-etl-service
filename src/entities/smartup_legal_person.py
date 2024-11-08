@@ -15,7 +15,6 @@ class SmartupLegalPersonEntity(BaseModel):
   person_id: int
   name: str
   short_name: str
-  code: str | None
   region_id: int | None
   type_binds: list[SmartupLegalPersonTypeEntity] | None = []
 

@@ -1,93 +1,124 @@
 
-from datetime import datetime, timedelta, timezone
-from entities import SmartupCredentials, SmartupFilters
+from entities import SmartupCredentials, SmartupDealFilters
 from clients import SmartupExtractionClient, SmartupAuth
 from daos import OrderDAO, PipeSettingsDAO, ProductDAO, ClientDAO
+from datetime import datetime
 from db import Session
-from sqlalchemy.ext.asyncio import AsyncSession
 
 class SmartupPipe:
   _credentials: SmartupCredentials
-  _pagination_timedelta: timedelta = timedelta(days=1)
 
   def __init__(self, credentials: SmartupCredentials):
     self._credentials = credentials
-
-  # load pipe settings from smartup_pipe_settings and you can work with this
-  async def extract_data_between(self, auth: SmartupAuth, session: AsyncSession, filters: SmartupFilters):
-    orders = await SmartupExtractionClient.extractDeals(auth, filters)
-
-    orderDao = OrderDAO(session)
-
-    await orderDao.bulk_upsert_orders(pipe_id=self._credentials.id, orders=orders)
-
-  async def _initial_data_extraction(self, head_token: str):
-    end_load_time = datetime.now()
-
-    filters = SmartupFilters(end_modified_on=end_load_time)
-    auth = SmartupAuth(self._credentials.host, head_token)
-
-    async with Session.begin() as session:
-      productDao = ProductDAO(session)
-      clientDao = ClientDAO(session)
-
-      products = await SmartupExtractionClient.extractProducts(auth, filters)
-      await productDao.bulk_upsert_products(pipe_id=self._credentials.id, products=products)
-      
-      clients = await SmartupExtractionClient.extractClients(auth, filters)
-      await clientDao.bulk_upsert_clients(pipe_id=self._credentials.id, clients=clients)
-
-  async def extract_data_since(self, start_load_time: datetime | None = None):
-    if len(self._credentials.filials) == 0:
-      raise RuntimeError('when extracting data from SmartUp at least one filial credential should be provided')
-
-    filial_tokens = []
-    head_token = ""
-
-    for filial in self._credentials.filials:
-      token = await SmartupExtractionClient.get_access_token(self._credentials.host, filial)
-      filial_tokens.append(token)
-
-      if filial.is_head_filial:
-        head_token = token
     
-    if head_token == "":
-      head_token = filial_tokens[0]
+  async def _extract_deal_products(self, auth: SmartupAuth, filters: SmartupDealFilters, cursor: int | None, update_pipe_cursor: bool = True):
+    next_cursor = max(cursor or 1, 1)
+    last_cursor = next_cursor
 
-    is_initial_load = start_load_time or self._credentials.last_execution_time is None
-    start_load_time = start_load_time or self._credentials.last_execution_time or datetime.now() - 2 * self._pagination_timedelta
-
-    end_load_time = datetime.now()
-
-    if is_initial_load:
-      await self._initial_data_extraction(head_token)
-
-    while start_load_time < end_load_time:
-      # Extract data for each time window of _pagination_timedelta
-      next_end_time = min(start_load_time + self._pagination_timedelta, end_load_time)
-      
-      filters = SmartupFilters(begin_modified_on=start_load_time, end_modified_on=next_end_time)
+    while next_cursor > 0:
+      last_cursor = next_cursor
 
       async with Session.begin() as session:
-        pipeDao = PipeSettingsDAO(session)
-        productDao = ProductDAO(session)
-        clientDao = ClientDAO(session)
+        dao = OrderDAO(session)
 
-        for token in filial_tokens:
-          auth = SmartupAuth(self._credentials.host, token)
-          await self.extract_data_between(auth, session, filters)
-        
-        if not is_initial_load:
-          auth = SmartupAuth(self._credentials.host, head_token)
+        order_products, next_cursor = await SmartupExtractionClient.extractDealProducts(auth, filters, next_cursor)
 
-          products = await SmartupExtractionClient.extractProducts(auth, filters)
-          await productDao.bulk_upsert_products(pipe_id=self._credentials.id, products=products)
-          
-          clients = await SmartupExtractionClient.extractClients(auth, filters)
-          await clientDao.bulk_upsert_clients(pipe_id=self._credentials.id, clients=clients)
+        await dao.bulk_upsert_order_products(pipe_id=self._credentials.id, order_products=order_products)
 
-        await pipeDao.update_pipe_last_executed(self._credentials.id, next_end_time)
+    if update_pipe_cursor:
+      async with Session.begin() as session:
+        pipe_dao = PipeSettingsDAO(session)
+
+        await pipe_dao.upsert_pipe_cursor(pipe_id=self._credentials.id, extraction_key=PipeSettingsDAO.ORDER_PRODUCTS_CURSOR_KEY, cursor=last_cursor)
+
+  async def _extract_deals(self, auth: SmartupAuth, filters: SmartupDealFilters, cursor: int | None, update_pipe_cursor: bool = True):
+    next_cursor = max(cursor or 1, 1)
+    last_cursor = next_cursor
+
+    while next_cursor > 0:
+      last_cursor = next_cursor
       
-      start_load_time = next_end_time
+      async with Session.begin() as session:
+        dao = OrderDAO(session)
 
-    print(f'End Extration Job {datetime.now()}')
+        orders, next_cursor = await SmartupExtractionClient.extractDeals(auth, filters, next_cursor)
+
+        await dao.bulk_upsert_orders(pipe_id=self._credentials.id, orders=orders)
+
+      deal_ids = [
+        order.deal_id for order in orders
+      ]
+
+      if len(deal_ids) > 0:
+        product_filters = SmartupDealFilters(deal_ids=deal_ids)
+
+        await self._extract_deal_products(auth, product_filters, None, update_pipe_cursor)
+
+    if update_pipe_cursor:
+      async with Session.begin() as session:
+        pipe_dao = PipeSettingsDAO(session)
+
+        await pipe_dao.upsert_pipe_cursor(pipe_id=self._credentials.id, extraction_key=PipeSettingsDAO.ORDERS_CURSOR_KEY, cursor=last_cursor)
+  
+  async def _extract_clients(self, auth: SmartupAuth, cursor: int | None):
+    next_cursor = max(cursor or 1, 1)
+    last_cursor = next_cursor
+
+    while next_cursor > 0:
+      last_cursor = next_cursor
+
+      async with Session.begin() as session:
+        dao = ClientDAO(session)
+
+        clients, next_cursor = await SmartupExtractionClient.extractClients(auth, next_cursor)
+
+        await dao.bulk_upsert_clients(pipe_id=self._credentials.id, clients=clients)
+
+    async with Session.begin() as session:
+      pipe_dao = PipeSettingsDAO(session)
+
+      await pipe_dao.upsert_pipe_cursor(pipe_id=self._credentials.id, extraction_key=PipeSettingsDAO.CLIENTS_CURSOR_KEY, cursor=last_cursor)
+  
+  async def _extract_products(self, auth: SmartupAuth, cursor: int | None):
+    next_cursor = max(cursor or 1, 1)
+    last_cursor = next_cursor
+
+    while next_cursor > 0:
+      last_cursor = next_cursor
+
+      async with Session.begin() as session:
+        dao = ProductDAO(session)
+
+        products, next_cursor = await SmartupExtractionClient.extractProducts(auth, next_cursor)
+
+        await dao.bulk_upsert_products(pipe_id=self._credentials.id, products=products)
+
+    async with Session.begin() as session:
+      pipe_dao = PipeSettingsDAO(session)
+
+      await pipe_dao.upsert_pipe_cursor(pipe_id=self._credentials.id, extraction_key=PipeSettingsDAO.PRODUCTS_CURSOR_KEY, cursor=last_cursor)
+
+  async def extract_deals_between(self, filters: SmartupDealFilters, reload_clients: bool = False, reload_products: bool = False):
+    token = await SmartupExtractionClient.get_access_token(self._credentials)
+
+    auth = SmartupAuth(self._credentials.host, token)
+    
+    update_pipe_cursor = filters.end_deal_month is None or filters.end_deal_month >= datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if reload_clients:
+      await self._extract_clients(auth, None)
+    if reload_products:
+      await self._extract_products(auth, None)
+
+    await self._extract_deals(auth, filters, None, update_pipe_cursor)
+
+  async def extract_data(self):
+    token = await SmartupExtractionClient.get_access_token(self._credentials)
+
+    auth = SmartupAuth(self._credentials.host, token)
+
+    filters = SmartupDealFilters()
+
+    await self._extract_clients(auth, self._credentials.cursors.get(PipeSettingsDAO.CLIENTS_CURSOR_KEY))
+    await self._extract_products(auth, self._credentials.cursors.get(PipeSettingsDAO.PRODUCTS_CURSOR_KEY))
+    await self._extract_deals(auth, filters, self._credentials.cursors.get(PipeSettingsDAO.ORDERS_CURSOR_KEY))

@@ -1,22 +1,21 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, and_
 from entities import SmartupCredentials, NewSmartupCredentials
-from models import SmartupPipes, SmartupFilialCredentials
-from datetime import datetime
+from models import SmartupPipes, SmartupCursors
 
 class PipeSettingsDAO:
+  ORDERS_CURSOR_KEY = "orders"
+  ORDER_PRODUCTS_CURSOR_KEY = "order_products"
+  CLIENTS_CURSOR_KEY = "clients"
+  PRODUCTS_CURSOR_KEY = "products"
+
   def __init__(self, session: AsyncSession):
     self.session = session
   
   async def insert_pipe_settings(self, credentials: NewSmartupCredentials) -> int:
-    if len(credentials.filials) == 0:
-      raise RuntimeError('Filial credentials list must have at least one entry')
-
-    insert_stmt = insert(SmartupPipes).values(**credentials.model_dump(exclude_none=True, exclude={
-      'filials': True
-    }))
+    insert_stmt = insert(SmartupPipes).values(**credentials.model_dump(exclude_none=True))
     insert_stmt = insert_stmt.returning(SmartupPipes.id)
 
     pipe_id = await self.session.scalar(insert_stmt)
@@ -24,61 +23,30 @@ class PipeSettingsDAO:
     if pipe_id is None:
       raise RuntimeError('Insert should always return id, but nothing was returned')
 
-    filial_credentials = [
-      {
-        'pipe_id': pipe_id,
-        **filial.model_dump()
-      }
-      for filial in credentials.filials
-    ]
-
-    insert_stmt = insert(SmartupFilialCredentials)
-
-    await self.session.execute(insert_stmt, filial_credentials)
-
     return pipe_id
 
   async def update_pipe_settings(self, credentials: SmartupCredentials) -> int:
-    if len(credentials.filials) == 0:
-      raise RuntimeError('Filial credentials list must have at least one entry')
-
     update_stmt = (
       update(SmartupPipes).
        where(SmartupPipes.id == credentials.id).
-      values(credentials.model_dump(exclude_none=True, exclude_unset=True, exclude={ 'id', 'filials' }))
+      values(credentials.model_dump(exclude_none=True, exclude_unset=True, exclude={ 'id', 'cursors' }))
     )
 
     result = await self.session.execute(update_stmt)
 
-    filial_credentials = [
-      {
-        'pipe_id': credentials.id,
-        **filial.model_dump()
-      }
-      for filial in credentials.filials
-    ]
-
-    upsert_stmt = insert(SmartupFilialCredentials)
-    upsert_stmt = upsert_stmt.on_conflict_do_update(constraint='smartup_pipe_credentials_pk', set_={
-      name: upsert_stmt.excluded[name] for name in SmartupFilialCredentials.nonprimary_columns()
-    })
-
-    await self.session.execute(upsert_stmt, filial_credentials)
-
     return result.rowcount
 
-  async def update_pipe_last_executed(self, id: int, execution_time: datetime) -> None:
-    update_stmt = (
-      update(SmartupPipes).
-       where(SmartupPipes.id == id).
-      values(last_execution_time = execution_time)
-    )
+  async def upsert_pipe_cursor(self, pipe_id: int, extraction_key: str, cursor: int) -> None:
+    upsert_stmt = insert(SmartupCursors).values(pipe_id=pipe_id, extraction_key=extraction_key, last_cursor=cursor)
+    upsert_stmt = upsert_stmt.on_conflict_do_update(constraint='smartup_cursors_pk', set_={
+      name: upsert_stmt.excluded[name] for name in SmartupCursors.nonprimary_columns()
+    })
 
-    await self.session.execute(update_stmt)
+    await self.session.execute(upsert_stmt)
 
   async def get_pipe_settings_by_id(self, id: int) -> SmartupCredentials | None:
     select_stmt = (
-      select(SmartupPipes).options(selectinload(SmartupPipes.filials)).
+      select(SmartupPipes).options(selectinload(SmartupPipes.cursors)).
        where(SmartupPipes.id == id)
     )
 
@@ -91,7 +59,7 @@ class PipeSettingsDAO:
 
   async def get_all_pipe_settings(self) -> list[SmartupCredentials]:
     select_stmt = (
-      select(SmartupPipes).options(selectinload(SmartupPipes.filials))
+      select(SmartupPipes).options(selectinload(SmartupPipes.cursors))
     )
 
     settings = await self.session.scalars(select_stmt)

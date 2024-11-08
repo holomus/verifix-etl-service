@@ -2,10 +2,11 @@ from async_client import httpx_client
 from httpx import Auth
 from entities import (
   OrderEntity, 
-  SmartupFilialCredentials, 
-  SmartupFilters,
+  OrderProductEntity,
+  SmartupCredentials,
   SmartupLegalPersonEntity,
   SmartupProductEntity,
+  SmartupDealFilters
 )
 
 class SmartupAuth(Auth):
@@ -19,14 +20,15 @@ class SmartupAuth(Auth):
 
 class SmartupExtractionClient:
   ACCESS_TOKEN_PATH = "{}/security/oauth/token"
-  DEALS_EXPORT_PATH = "{}/b/trade/txs/tdeal/order$export"
-  CLIENTS_EXPORT_PATH = "{}/b/anor/mxsx/mr/legal_person$export"
-  PRODUCTS_EXPORT_PATH = "{}/b/anor/mxsx/mr/inventory$export"
+  DEALS_PAGINATED_EXPORT_PATH = "{}/b/anor/api/v2/mdeal/order$list"
+  DEAL_PRODUCTS_PAGINATED_EXPORT_PATH = "{}/b/anor/api/v2/mdeal/order$list_products"
+  CLIENTS_PAGINATED_EXPORT_PATH="{}/b/anor/api/v2/mr/legal_person$list"
+  PRODUCT_PAGINATED_EXPORT_PATH="{}/b/anor/api/v2/mr/inventory$list"
 
   @classmethod
-  async def get_access_token(cls, host: str, credentials: SmartupFilialCredentials) -> str:
+  async def get_access_token(cls, credentials: SmartupCredentials) -> str:
     response = await httpx_client.post(
-      cls.ACCESS_TOKEN_PATH.format(host),
+      cls.ACCESS_TOKEN_PATH.format(credentials.host),
       json={
         'grant_type': 'client_credentials',
         'client_id': credentials.client_id,
@@ -43,12 +45,13 @@ class SmartupExtractionClient:
     return response['access_token']
 
   @classmethod
-  async def extractDeals(cls, smartup_auth: SmartupAuth, filters: SmartupFilters) -> list[OrderEntity]:
+  async def extractDeals(cls, smartup_auth: SmartupAuth, filters: SmartupDealFilters, cursor: int | None) -> tuple[list[OrderEntity], int]:
     response = await httpx_client.post(
-      cls.DEALS_EXPORT_PATH.format(smartup_auth.host),
+      cls.DEALS_PAGINATED_EXPORT_PATH.format(smartup_auth.host),
       auth=smartup_auth,
       headers={
         'project_code': 'trade',
+        'cursor': str(cursor) if cursor is not None else ""
       },
       json=filters.model_dump(exclude_none=True, exclude_unset=True)
     )
@@ -56,54 +59,83 @@ class SmartupExtractionClient:
     if response.status_code != 200:
       raise Exception(response.text)
 
-    orders = response.json()['order']
+    result = response.json()
+
+    orders = result['data']
+    meta = result['meta']
 
     return [
-      OrderEntity(**order, products=order['order_products']) for order in orders
-    ]
+      OrderEntity(**order) for order in orders
+    ], int(meta['next_cursor'])
   
   @classmethod
-  async def extractClients(cls, smartup_auth: SmartupAuth, filters: SmartupFilters) -> list[SmartupLegalPersonEntity]:
+  async def extractDealProducts(cls, smartup_auth: SmartupAuth, filters: SmartupDealFilters, cursor: int | None) -> tuple[list[OrderProductEntity], int]:
     response = await httpx_client.post(
-      cls.CLIENTS_EXPORT_PATH.format(smartup_auth.host),
+      cls.DEAL_PRODUCTS_PAGINATED_EXPORT_PATH.format(smartup_auth.host),
       auth=smartup_auth,
       headers={
         'project_code': 'trade',
+        'cursor': str(cursor) if cursor is not None else ""
       },
-      json=filters.model_dump(exclude_none=True, exclude_unset=True, include={
-        'begin_modified_on',
-        'end_modified_on'
-      })
+      json=filters.model_dump(exclude_none=True, exclude_unset=True)
     )
 
     if response.status_code != 200:
       raise Exception(response.text)
 
-    clients = response.json()['legal_person']
+    result = response.json()
+
+    order_products = result['data']
+    meta = result['meta']
+
+    return [
+      OrderProductEntity(**product) for product in order_products
+    ], int(meta['next_cursor'])
+  
+  @classmethod
+  async def extractClients(cls, smartup_auth: SmartupAuth, cursor: int | None) -> tuple[list[SmartupLegalPersonEntity], int]:
+    response = await httpx_client.post(
+      cls.CLIENTS_PAGINATED_EXPORT_PATH.format(smartup_auth.host),
+      auth=smartup_auth,
+      headers={
+        'project_code': 'trade',
+        'cursor': str(cursor) if cursor is not None else ""
+      },
+      json={}
+    )
+
+    if response.status_code != 200:
+      raise Exception(response.text)
+    
+    result = response.json()
+
+    clients = result['data']
+    meta = result['meta']
 
     return [
       SmartupLegalPersonEntity(**client, type_binds=client['groups']) for client in clients
-    ]
+    ], int(meta['next_cursor'])
   
   @classmethod
-  async def extractProducts(cls, smartup_auth: SmartupAuth, filters: SmartupFilters) -> list[SmartupProductEntity]:
+  async def extractProducts(cls, smartup_auth: SmartupAuth, cursor: int | None) -> tuple[list[SmartupProductEntity], int]:
     response = await httpx_client.post(
-      cls.PRODUCTS_EXPORT_PATH.format(smartup_auth.host),
+      cls.PRODUCT_PAGINATED_EXPORT_PATH.format(smartup_auth.host),
       auth=smartup_auth,
       headers={
         'project_code': 'trade',
+        'cursor': str(cursor) if cursor is not None else ""
       },
-      json=filters.model_dump(exclude_none=True, exclude_unset=True, include={
-        'begin_modified_on',
-        'end_modified_on'
-      })
+      json={}
     )
 
     if response.status_code != 200:
       raise Exception(response.text)
 
-    products = response.json()['inventory']
+    result = response.json()
+
+    products = result['data']
+    meta = result['meta']
 
     return [
       SmartupProductEntity(**product, type_binds=product['groups']) for product in products
-    ]
+    ], int(meta['next_cursor'])

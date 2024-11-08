@@ -13,7 +13,6 @@ class SmartupProductEntity(BaseModel):
   model_config = ConfigDict(from_attributes=True)
   
   product_id: int
-  code: str | None
   name: str
   weight_netto: float | None
   weight_brutto: float | None

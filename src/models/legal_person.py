@@ -8,9 +8,8 @@ class SmartupLegalPersons(Base):
   
   pipe_id = Column(BigInteger, primary_key=True, nullable=False)
   person_id = Column(BigInteger, primary_key=True, nullable=False)
-  name = Column(String(500), nullable=False)
-  short_name = Column(String(500), nullable=False)
-  code = Column(String(100))
+  name = Column(String(1000), nullable=False)
+  short_name = Column(String(1000), nullable=False)
   region_id = Column(BigInteger)
 
   __table_args__ = (
