@@ -1,5 +1,6 @@
 import uvicorn
 import secrets
+import config
 from typing import Annotated
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -12,13 +13,13 @@ from async_client import httpx_client
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
-    # TODO: parametrize run time
-    scheduler.add_job(start_extraction_on_all_pipes) # once right now
-    scheduler.add_job(start_extraction_on_all_pipes, trigger='cron', hour='3', minute='0') # every day at 03:00
-    scheduler.start()
-    yield
-    scheduler.shutdown()
-    await httpx_client.aclose()
+  # TODO: parametrize run time
+  scheduler.add_job(start_extraction_on_all_pipes) # once right now
+  scheduler.add_job(start_extraction_on_all_pipes, trigger='cron', hour='3', minute='0') # every day at 03:00
+  scheduler.start()
+  yield
+  scheduler.shutdown()
+  await httpx_client.aclose()
 
 security = HTTPBasic()
 
@@ -77,4 +78,4 @@ async def print_jobs():
   ]
 
 if __name__ == "__main__":
-  uvicorn.run(app, host="0.0.0.0", port=8000)
+  uvicorn.run(app, host="0.0.0.0", port=8000, log_config=config.LOGGING_CONFIG)
