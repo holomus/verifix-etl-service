@@ -13,9 +13,8 @@ from async_client import httpx_client
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
-  # TODO: parametrize run time
   scheduler.add_job(start_extraction_on_all_pipes) # once right now
-  scheduler.add_job(start_extraction_on_all_pipes, trigger='cron', hour='3', minute='0') # every day at 03:00
+  scheduler.add_job(start_extraction_on_all_pipes, trigger='cron', hour=config.EXTRACTION_JOB_RUN_HOUR, minute=config.EXTRACTION_JOB_RUN_MINUTES)
   scheduler.start()
   yield
   scheduler.shutdown()
@@ -27,12 +26,12 @@ def verify_user(
   credentials: Annotated[HTTPBasicCredentials, Depends(security)],
 ):
   current_username_bytes = credentials.username.encode("utf8")
-  correct_username_bytes = b"admin" # TODO: add to config
+  correct_username_bytes = config.FASTAPI_AUTH_USERNAME
   is_correct_username = secrets.compare_digest(
     current_username_bytes, correct_username_bytes
   )
   current_password_bytes = credentials.password.encode("utf8")
-  correct_password_bytes = b"admin" # TODO: add to config
+  correct_password_bytes = config.FASTAPI_AUTH_PASSWORD
   is_correct_password = secrets.compare_digest(
     current_password_bytes, correct_password_bytes
   )

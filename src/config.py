@@ -1,4 +1,3 @@
-from datetime import date
 import os
 
 DATABASE_USERNAME='verifix'
@@ -8,6 +7,12 @@ DATABASE_URL='localhost'
 DATABASE_PORT='5432'
 
 DATABASE_NAME='verifix_etl_db'
+
+EXTRACTION_JOB_RUN_HOUR='3'
+EXTRACTION_JOB_RUN_MINUTES='0'
+
+FASTAPI_AUTH_USERNAME=b'admin'
+FASTAPI_AUTH_PASSWORD=b'admin'
 
 LOG_DIR = './logs'
 if not os.path.exists(LOG_DIR):
@@ -35,7 +40,7 @@ LOGGING_CONFIG = {
       'class': 'logging.StreamHandler',
       'stream': 'ext://sys.stdout',  # Default is stderr
     },
-    'file_handler': { 
+    'default_file_handler': { 
       'class': 'logging.handlers.TimedRotatingFileHandler',
       'formatter': 'custom_formatter',
       'filename': f'{LOG_DIR}/app.log',
@@ -43,30 +48,46 @@ LOGGING_CONFIG = {
       'utc': True,
       'backupCount': 60,
     },
+    'access_log_file_handler': { 
+      'class': 'logging.handlers.TimedRotatingFileHandler',
+      'formatter': 'custom_formatter',
+      'filename': f'{LOG_DIR}/access.log',
+      'when': 'D',
+      'utc': True,
+      'backupCount': 60,
+    },
+    'job_file_handler': { 
+      'class': 'logging.handlers.TimedRotatingFileHandler',
+      'formatter': 'custom_formatter',
+      'filename': f'{LOG_DIR}/job.log',
+      'when': 'D',
+      'utc': True,
+      'backupCount': 60,
+    },
   },
   'loggers': {
     'uvicorn': {
-      'handlers': ['default', 'file_handler'],
+      'handlers': ['default', 'default_file_handler'],
       'level': 'TRACE',
       'propagate': False
     },
     'uvicorn.access': {
-      'handlers': ['stream_handler', 'file_handler'],
+      'handlers': ['stream_handler', 'access_log_file_handler'],
       'level': 'TRACE',
       'propagate': False
     },
     'uvicorn.error': { 
-      'handlers': ['stream_handler', 'file_handler'],
+      'handlers': ['stream_handler', 'default_file_handler'],
       'level': 'TRACE',
       'propagate': False
     },
     'uvicorn.asgi': {
-      'handlers': ['stream_handler', 'file_handler'],
+      'handlers': ['stream_handler', 'default_file_handler'],
       'level': 'TRACE',
       'propagate': False
     },
     'apscheduler': {
-      'handlers': ['stream_handler', 'file_handler'],
+      'handlers': ['stream_handler', 'job_file_handler'],
       'level': 'TRACE',
       'propagate': False
     }
