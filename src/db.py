@@ -1,10 +1,8 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-import config
+import os
 
 # Create an engine connected to your database
-async_engine = create_async_engine(f'postgresql+asyncpg://{config.DATABASE_USERNAME}:{config.DATABASE_PASSWORD}@{config.DATABASE_URL}:{config.DATABASE_PORT}/{config.DATABASE_NAME}')
+async_engine = create_async_engine(os.environ['DATABASE_URL'])
 
 # Create a configured "Session" class
 Session = async_sessionmaker(bind=async_engine)

@@ -1,0 +1,48 @@
+services:
+  db:
+    env_file:
+      - path: ./.env # default
+        required: true
+      - path: ./.env-local # optional override
+        required: false
+    image: postgres:16.4
+    container_name: postgres_db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${VERIFIX_DB_USER} -d ${VERIFIX_DB}"]
+      interval: 3s
+      timeout: 5s
+      retries: 5
+
+  fastapi-app:
+    env_file:
+      - path: ./.env # default
+        required: true
+      - path: ./.env-local # optional override
+        required: false
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: verifix_etl_service
+    restart: on-failure
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${VERIFIX_DB_USER}:${VERIFIX_DB_PASSWORD}@db:5432/${VERIFIX_DB}
+    volumes:
+      - app_logs:/src/logs
+
+volumes:
+  postgres_data:
+    external: false
+  app_logs:
+    external: false

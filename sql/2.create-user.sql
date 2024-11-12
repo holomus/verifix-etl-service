@@ -1,22 +1,24 @@
--- Prompt user for input for the username and password
-\prompt 'Enter username: ' username
-\prompt 'Enter password: ' password
+\getenv verifix_db VERIFIX_DB
+\getenv verifix_db_user VERIFIX_DB_USER
+\getenv verifix_db_password VERIFIX_DB_PASSWORD
+
+\connect :verifix_db
 
 -- Create the user
-CREATE ROLE :username WITH LOGIN PASSWORD :'password';
+CREATE ROLE :verifix_db_user WITH LOGIN PASSWORD :'verifix_db_password';
 
 -- Grant role privileges
-GRANT ALL PRIVILEGES ON DATABASE verifix_etl_db TO :username;
+GRANT ALL PRIVILEGES ON DATABASE :verifix_db TO :verifix_db_user;
 
 -- Create a schema
-CREATE SCHEMA IF NOT EXISTS verifix AUTHORIZATION :username;
+CREATE SCHEMA IF NOT EXISTS :verifix_db_user AUTHORIZATION :verifix_db_user;
 
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA verifix TO :username;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA verifix TO :username;
-GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA verifix TO :username;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA :verifix_db_user TO :verifix_db_user;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA :verifix_db_user TO :verifix_db_user;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA :verifix_db_user TO :verifix_db_user;
 
-GRANT USAGE ON SCHEMA verifix TO :username;
+GRANT USAGE ON SCHEMA :verifix_db_user TO :verifix_db_user;
 
-ALTER DEFAULT privileges in schema verifix grant all privileges on tables to :username;
-ALTER DEFAULT privileges in schema verifix grant all privileges on sequences to :username;
-ALTER DEFAULT privileges in schema verifix grant all privileges on functions to :username;
+ALTER DEFAULT privileges in schema :verifix_db_user grant all privileges on tables to :verifix_db_user;
+ALTER DEFAULT privileges in schema :verifix_db_user grant all privileges on sequences to :verifix_db_user;
+ALTER DEFAULT privileges in schema :verifix_db_user grant all privileges on functions to :verifix_db_user;
